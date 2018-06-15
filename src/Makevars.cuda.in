@@ -1,0 +1,15 @@
+NVCC = nvcc
+PKG_NVCCFLAGS = -std=c++11 -O3 -arch=compute_30 -Xcompiler='$(CXX11PICFLAGS) $(C_VISIBILITY)'
+
+OBJS_CPU = cpu/datafile.o cpu/discretize.o cpu/discretizedfile.o \
+	cpu/mdfs_common.o cpu/mdfs_scalar.o cpu/stats.o
+OBJS_GPU = gpu/discretize.o gpu/allocator.o gpu/kernels.o gpu/calc.o \
+	gpu/launchable.o gpu/cucubes.o gpu/scheduler.o gpu/discretizer.o \
+	gpu/kernellauncher.o gpu/worker.o
+OBJECTS = $(OBJS_CPU) $(OBJS_GPU) r_init.o r_interface.o
+
+CXX_STD = CXX11
+
+# use patterns (GNU-ext) because .SUFFIXES are reset by R
+%.o: %.cu
+	$(NVCC) $(PKG_NVCCFLAGS) $(NVCCFLAGS) -c $< -o $@
