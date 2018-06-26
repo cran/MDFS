@@ -17,7 +17,9 @@
 #'    \item \code{contrast.variables} -- built contrast variables
 #'    \item \code{MIG.Result} -- result of ComputeMaxInfoGains
 #'    \item \code{MDFS} -- result of ComputePValue (the MDFS object)
-#'    \item \code{adjusted.p.value} -- vector of adjusted p-values for each variable
+#'    \item \code{statistic} -- vector of statistic's values (IGs) for corresponding variables
+#'    \item \code{p.value} -- vector of p-values for corresponding variables
+#'    \item \code{adjusted.p.value} -- vector of adjusted p-values for corresponding variables
 #'    \item \code{relevant.variables} -- vector of relevant variables indices
 #'  }
 #' @examples
@@ -64,7 +66,9 @@ MDFS <- function(
   contrast.mask = contrast.mask,
   one.dim.mode = ifelse (discretizations==1, "raw", ifelse(divisions*discretizations<12, "lin", "exp")))
 
- adjusted.p.value <- p.adjust(fs$p.value,method=p.adjust.method)
+ statistic <- if(is.null(contrast.mask)) { MIG.Result$IG } else { MIG.Result$IG[!contrast.mask] }
+ p.value <- if(is.null(contrast.mask)) { fs$p.value } else { fs$p.value[!contrast.mask] }
+ adjusted.p.value <- p.adjust(p.value, method=p.adjust.method)
  relevant.variables <- which(adjusted.p.value<level)
 
  return(list(
@@ -72,6 +76,8 @@ MDFS <- function(
   contrast.variables = contrast.variables,
   MIG.Result = MIG.Result,
   MDFS = fs,
+  statistic = statistic,
+  p.value = p.value,
   adjusted.p.value = adjusted.p.value,
   relevant.variables = relevant.variables
   )

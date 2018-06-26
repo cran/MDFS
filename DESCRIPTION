@@ -1,7 +1,7 @@
 Package: MDFS
 Title: MultiDimensional Feature Selection
-Version: 1.0.0
-Date: 2018-06-15
+Version: 1.0.1
+Date: 2018-06-26
 Authors@R: c(
     person("Radosław", "Piliszek", email = "r.piliszek@uwb.edu.pl", role = c("aut", "cre")),
     person("Krzysztof", "Mnich", email = "k.mnich@uwb.edu.pl", role = "aut"),
@@ -22,7 +22,7 @@ NeedsCompilation: yes
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
-Packaged: 2018-06-15 06:53:04 UTC; r.piliszek
+Packaged: 2018-06-26 15:44:08 UTC; r.piliszek
 Author: Radosław Piliszek [aut, cre],
   Krzysztof Mnich [aut],
   Paweł Tabaszewski [aut],
@@ -31,4 +31,4 @@ Author: Radosław Piliszek [aut, cre],
   Witold Remigiusz Rudnicki [aut]
 Maintainer: Radosław Piliszek <r.piliszek@uwb.edu.pl>
 Repository: CRAN
-Date/Publication: 2018-06-15 11:18:04 UTC
+Date/Publication: 2018-06-26 15:54:34 UTC

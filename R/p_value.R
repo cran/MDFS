@@ -332,7 +332,9 @@ RelevantVariables <- function(fs, ...) {
 #' @importFrom stats p.adjust
 #' @export
 RelevantVariables.MDFS <- function(fs, level=0.1, p.adjust.method="BH", ...) {
-  return(which(p.adjust(fs$p.value,method=p.adjust.method)<level))
+  contrast.mask <- attr(fs, 'run.params')$contrast.mask
+  p.value <- if(is.null(contrast.mask)) { fs$p.value } else { fs$p.value[!contrast.mask] }
+  return(which(p.adjust(p.value, method=p.adjust.method)<level))
 }
 
 #' Plot MDFS details

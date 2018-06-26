@@ -38,7 +38,9 @@ A \code{\link{list}} with the following fields:
    \item \code{contrast.variables} -- built contrast variables
    \item \code{MIG.Result} -- result of ComputeMaxInfoGains
    \item \code{MDFS} -- result of ComputePValue (the MDFS object)
-   \item \code{adjusted.p.value} -- vector of adjusted p-values for each variable
+   \item \code{statistic} -- vector of statistic's values (IGs) for corresponding variables
+   \item \code{p.value} -- vector of p-values for corresponding variables
+   \item \code{adjusted.p.value} -- vector of adjusted p-values for corresponding variables
    \item \code{relevant.variables} -- vector of relevant variables indices
  }
 }

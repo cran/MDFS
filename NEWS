@@ -1,0 +1,8 @@
+2018-06-26 | 1.0.1
+
+* fixed factors as input decision in ComputeMaxInfoGains,
+  ComputeInterestingTuples and MDFS
+
+* fix adjusted.p.value in MDFS
+
+* return statistic and p.value in MDFS

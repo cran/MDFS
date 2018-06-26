@@ -48,7 +48,7 @@ ComputeMaxInfoGains <- function(
 
   # try to rebase decision from 1 to 0 (as is the case with e.g. factors)
   if (!any(decision == 0)) {
-    decision <- decision - 1
+    decision <- decision - as.integer(1) # as.integer is crucial in keeping this an integer vector
   }
 
   if (!all(decision == 0 | decision == 1)) {
@@ -215,7 +215,7 @@ ComputeInterestingTuples <- function(
 
   # try to rebase decision from 1 to 0 (as is the case with e.g. factors)
   if (!any(decision == 0)) {
-    decision <- decision - 1
+    decision <- decision - as.integer(1) # as.integer is crucial in keeping this an integer vector
   }
 
   if (!all(decision == 0 | decision == 1)) {
