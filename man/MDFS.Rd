@@ -6,7 +6,8 @@
 \usage{
 MDFS(data, decision, n.contrast = max(ncol(data)/10, 30), dimensions = 1,
   divisions = NULL, discretizations = 1, range = NULL,
-  p.adjust.method = "BH", level = 0.1, seed = NULL, use.CUDA = FALSE)
+  pseudo.count = 0.25, p.adjust.method = "holm", level = 0.05,
+  seed = NULL, use.CUDA = FALSE)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
@@ -22,6 +23,8 @@ MDFS(data, decision, n.contrast = max(ncol(data)/10, 30), dimensions = 1,
 \item{discretizations}{number of discretizations}
 
 \item{range}{discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)}
+
+\item{pseudo.count}{pseudo count}
 
 \item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}}}
 

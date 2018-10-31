@@ -164,13 +164,6 @@ void splitKernel(KernelParam param) {
 			}
 		}
 
-		//if (off[0] + var[0] == 0 && off[1] + var[1] == 1) {
-		//	for (int q = 0; q < pow(DIV + 1, DIM); q++) {
-		//		printf("[%d %d]", counters[q][0], counters[q][1]);
-		//	}
-		//	printf("1\n");
-		//}
-
 		#pragma unroll
 		for (int d = 0; d < DIM; d++) {
 			#pragma unroll
@@ -204,12 +197,6 @@ void splitKernel(KernelParam param) {
 				int lower = DIM - 1 - d;
 				uint64_t val = param.counters[lower][linId[lower] * pow(DIV + 1, DIM - 1) + ref];
 
-				//if (off[0] + var[0] == 0 && off[1] + var[1] == 1) {
-				//	printf("%d: %d, %d | %d, %d\n", ref, (uint32_t)(val >> 32), (uint32_t)((val << 32) >> 32), sum[0], sum[1]);
-				//	uint64_t tmp = param.counters[lower][linId[lower] * pow(DIV + 1, DIM - 1)];
-				//	printf("0: %d, %d || %d %d %d\n", (uint32_t)(tmp >> 32), (uint32_t)((tmp << 32) >> 32), lower, linId[0], linId[1]);
-				//}
-
 				crd[d] = 0;
 				int index = 0;
 				#pragma unroll
@@ -220,13 +207,6 @@ void splitKernel(KernelParam param) {
 				counters[index][1] = (uint32_t)((val << 32) >> 32) - sum[1];
 			}
 		}
-
-		//if (off[0] + var[0] == 0 && off[1] + var[1] == 1) {
-		//	for (int q = 0; q < pow(DIV + 1, DIM); q++) {
-		//		printf("[%d %d]", counters[q][0], counters[q][1]);
-		//	}
-		//	printf("2\n");
-		//}
 
 		if (DIM > 2) {
 		#pragma unroll
@@ -397,13 +377,6 @@ void splitKernel(KernelParam param) {
 		}
 		counters[0][0] = param.objs[0] - sum[0];
 		counters[0][1] = param.objs[1] - sum[1];
-
-		//if (off[0] + var[0] == 0 && off[1] + var[1] == 1) {
-		//	for (int q = 0; q < pow(DIV + 1, DIM); q++) {
-		//		printf("[%d %d]", counters[q][0], counters[q][1]);
-		//	}
-		//	printf("6\n");
-		//}
 
 		// IG
 		float totalInf = 0.0f;

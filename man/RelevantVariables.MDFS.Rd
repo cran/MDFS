@@ -4,7 +4,7 @@
 \alias{RelevantVariables.MDFS}
 \title{Find indices of relevant variables from MDFS}
 \usage{
-\method{RelevantVariables}{MDFS}(fs, level = 0.1, p.adjust.method = "BH",
+\method{RelevantVariables}{MDFS}(fs, level = 0.05, p.adjust.method = "holm",
   ...)
 }
 \arguments{

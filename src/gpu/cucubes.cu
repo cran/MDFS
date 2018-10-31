@@ -5,6 +5,7 @@
 void nopCallback(int a, int b, int c, int d) {
 }
 
+// TODO: check sanity of input
 void run_cucubes(
 	int n,
 	int k,

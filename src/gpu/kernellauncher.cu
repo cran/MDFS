@@ -1,13 +1,13 @@
 #include "kernellauncher.cuh"
 #include "kernels.cuh"
+#include "not_implemented_exception.h"
 
-#include <iostream>
-#include <chrono>
-#include <stdio.h>
+#include <sstream>
 
 void notImplemented(KernelParam param) {
-	std::cerr << "Error: " << param << " not implemented." << std::endl;
-	exit(1);
+	std::ostringstream oss;
+	oss << param;
+	throw new NotImplementedException(oss.str());
 }
 
 void tablesKernelLauncher(int vars,

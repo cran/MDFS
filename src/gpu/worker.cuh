@@ -10,7 +10,6 @@
 class Calc;
 
 class Worker : public Launchable {
-	const int workerId;
 	int vars;
 	int gpuId;
 	LaunchConfig lc;

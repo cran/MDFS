@@ -1,8 +1,8 @@
 NVCC = nvcc
 PKG_NVCCFLAGS = -std=c++11 -O3 -arch=compute_30 -Xcompiler='$(CXX11PICFLAGS) $(C_VISIBILITY)'
 
-OBJS_CPU = cpu/datafile.o cpu/discretize.o cpu/discretizedfile.o \
-	cpu/mdfs_common.o cpu/mdfs_scalar.o cpu/stats.o
+OBJS_CPU = cpu/discretize.o cpu/dataset.o \
+	cpu/common.o cpu/mdfs.o cpu/stats.o
 OBJS_GPU = gpu/discretize.o gpu/allocator.o gpu/kernels.o gpu/calc.o \
 	gpu/launchable.o gpu/cucubes.o gpu/scheduler.o gpu/discretizer.o \
 	gpu/kernellauncher.o gpu/worker.o

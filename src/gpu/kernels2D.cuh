@@ -244,8 +244,6 @@ void kernel2D_short(KernelParam param) {
 	__shared__ uint32_t counters[PX][PY][DIV + 1][DIV + 1];
 	uint32_t* shared = (uint32_t*) counters;
 
-	//if (blockIdx.x==0 && threadIdx.x == 0 && threadIdx.y == 0) printf("@ %d, %d %d\n", blockIdx.y, param.packs[0], param.packs[1]);
-
 	int bX = PX * blockIdx.x;
 	int bY = PY * blockIdx.y;
 	int tId = blockDim.x * threadIdx.y + threadIdx.x;

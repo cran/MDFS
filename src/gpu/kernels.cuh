@@ -1,7 +1,7 @@
 #ifndef KERNELS_CUH
 #define KERNELS_CUH
 
-#include <iostream>
+#include <ostream>
 #include <vector>
 #include <stdint.h>
 #include "launchconfig.cuh"

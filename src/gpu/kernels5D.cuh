@@ -519,16 +519,6 @@ void kernel5D_simple(KernelParam param) {
 		float relX3 = total - inf0124;
 		float relX4 = total - inf0123;
 
-		/*if (threadIdx.x == 0 &&
-			 (bX0 == 0 || bX1 == 0 ||bX2 == 0 ||bX3 == 0 ||bX4 == 0) &&
-			 (bX0 == 1 || bX1 == 1 ||bX2 == 1 ||bX3 == 1 ||bX4 == 1) &&
-			 (bX0 == 2 || bX1 == 2 ||bX2 == 2 ||bX3 == 2 ||bX4 == 2) &&
-			 (bX0 == 3 || bX1 == 3 ||bX2 == 3 ||bX3 == 3 ||bX4 == 3) &&
-			 (bX0 == 4 || bX1 == 4 ||bX2 == 4 ||bX3 == 4 ||bX4 == 4)) {
-			 	printf("%d, %d %d %d %d %d, %.2f, %.2f %.2f %.2f %.2f %.2f\n",
-			 	r, bX0, bX1, bX2, bX3, bX4, total, inf0123, inf0124, inf0134, inf0234, inf1234);
-		}*/
-
 		if (AVG) {
 			acc[0] += relX0;
 			acc[1] += relX1;

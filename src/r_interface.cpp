@@ -1,25 +1,13 @@
 #include "r_interface.h"
 
-#include "cpu/discretize.h"
-#include "cpu/mdfs_scalar.h"
+#include "cpu/dataset.h"
+#include "cpu/mdfs.h"
 
 #ifdef WITH_CUDA
+// required to report errors - currently only CUDA reports any errors
+#include <R.h>
 #include "gpu/cucubes.h"
 #endif
-
-DiscretizedFile* discretize(const DiscretizationInfo&& discretization_info, const int obj_count, const int variable_count, const double* data, const int* decision) {
-    DiscretizedFile *discretized_file;
-
-    DataFileInfo input_file_info(obj_count, variable_count);
-    DataFile input_file(input_file_info, data, decision);
-
-    DiscretizedFileInfo discretized_file_info(discretization_info.discretizations, obj_count, variable_count);
-    discretized_file = new DiscretizedFile(discretized_file_info);
-
-    discretizeFile(&input_file, discretized_file, discretization_info);
-
-    return discretized_file;
-}
 
 extern "C"
 SEXP r_compute_max_ig(
@@ -50,18 +38,26 @@ SEXP r_compute_max_ig(
     if (asLogical(Rin_use_cuda)) {
         SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
 
-        run_cucubes(
-                obj_count,
-                variable_count,
-                asInteger(Rin_dimensions),
-                asInteger(Rin_divisions),
-                asInteger(Rin_discretizations),
-                asInteger(Rin_seed),
-                asReal(Rin_range),
-                asReal(Rin_pseudocount),
-                REAL(Rin_data),
-                INTEGER(Rin_decision),
-                REAL(Rout_max_igs));
+        try {
+            run_cucubes(
+                    obj_count,
+                    variable_count,
+                    asInteger(Rin_dimensions),
+                    asInteger(Rin_divisions),
+                    asInteger(Rin_discretizations),
+                    asInteger(Rin_seed),
+                    asReal(Rin_range),
+                    asReal(Rin_pseudocount),
+                    REAL(Rin_data),
+                    INTEGER(Rin_decision),
+                    REAL(Rout_max_igs));
+        } catch (const cudaException& e) {
+            // TODO: ensure cleanup inside library
+            error("CUDA exception: %s (in %s:%d)", cudaGetErrorString(e.code), e.file, e.line);
+        } catch (const NotImplementedException& e) {
+            // TODO: is it possible to get this?
+            error("Not-implemented exception: %s", e.msg.c_str());
+        }
 
         const int result_members_count = 1;
 
@@ -77,17 +73,30 @@ SEXP r_compute_max_ig(
     const int discretizations = asInteger(Rin_discretizations);
     const int divisions = asInteger(Rin_divisions);
 
-    DiscretizedFile *discretized_file = discretize(DiscretizationInfo(asInteger(Rin_seed), discretizations, divisions, asReal(Rin_range)), obj_count, variable_count, REAL(Rin_data), INTEGER(Rin_decision));
+    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
 
-    AlgInfo algorithm_info;
-    algorithm_info.pseudo = asReal(Rin_pseudocount);
-    algorithm_info.dimensions = asInteger(Rin_dimensions);
-    algorithm_info.divisions = divisions;
-    algorithm_info.discretizations = discretizations;
+    DataSet dataset;
 
-    algorithm_info.interesting_vars = INTEGER(Rin_interesting_vars);
-    algorithm_info.interesting_vars_count = length(Rin_interesting_vars);
-    algorithm_info.require_all_vars = true; // true in max IGs, false in all matching tuples
+    dataset.loadData(
+        &rawdata,
+        DiscretizationInfo(
+            asInteger(Rin_seed), 
+            discretizations, 
+            divisions, 
+            asReal(Rin_range)
+        )
+    );
+
+    MDFSInfo mdfs_info(
+        asInteger(Rin_dimensions),
+        divisions,
+        discretizations,
+        asReal(Rin_pseudocount),
+        0.0f,
+        INTEGER(Rin_interesting_vars),
+        length(Rin_interesting_vars),
+        true // true in max IGs, false in all matching tuple
+    );
 
     SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
     SEXP Rout_tuples = nullptr;
@@ -95,12 +104,11 @@ SEXP r_compute_max_ig(
     const bool return_tuples = asLogical(Rin_return_tuples);
     MDFSOutput mdfs_output(MDFSOutputType::MaxIGs, variable_count);
     if (return_tuples) {
-        Rout_tuples = PROTECT(allocMatrix(INTSXP, algorithm_info.dimensions, variable_count));
-        mdfs_output.setTuples(INTEGER(Rout_tuples)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
+        Rout_tuples = PROTECT(allocMatrix(INTSXP, mdfs_info.dimensions, variable_count));
+        mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
     }
 
-    scalarMDFS(algorithm_info, discretized_file, mdfs_output);
-    delete discretized_file;
+    scalarMDFS(mdfs_info, &dataset, mdfs_output);
 
     mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
 
@@ -143,31 +151,40 @@ SEXP r_compute_all_matching_tuples(
     const int discretizations = asInteger(Rin_discretizations);
     const int divisions = asInteger(Rin_divisions);
 
-    DiscretizedFile *discretized_file = discretize(DiscretizationInfo(asInteger(Rin_seed), discretizations, divisions, asReal(Rin_range)), obj_count, variable_count, REAL(Rin_data), INTEGER(Rin_decision));
+    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
 
-    AlgInfo algorithm_info;
-    algorithm_info.pseudo = asReal(Rin_pseudocount);
-    algorithm_info.dimensions = asInteger(Rin_dimensions);
-    algorithm_info.divisions = divisions;
-    algorithm_info.discretizations = discretizations;
+    DataSet dataset;
 
-    algorithm_info.interesting_vars = INTEGER(Rin_interesting_vars);
-    algorithm_info.interesting_vars_count = length(Rin_interesting_vars);
-    algorithm_info.require_all_vars = false; // true in max IGs, false in all matching tuples
+    dataset.loadData(
+        &rawdata,
+        DiscretizationInfo(
+            asInteger(Rin_seed), 
+            discretizations, 
+            divisions, 
+            asReal(Rin_range)
+        )
+    );
 
-    algorithm_info.ig_thr = asReal(Rin_ig_thr);
+    MDFSInfo mdfs_info(
+        asInteger(Rin_dimensions),
+        divisions,
+        discretizations,
+        asReal(Rin_pseudocount),
+        asReal(Rin_ig_thr),
+        INTEGER(Rin_interesting_vars),
+        length(Rin_interesting_vars),
+        false // true in max IGs, false in all matching tuple
+    );
 
     MDFSOutput mdfs_output(MDFSOutputType::MatchingTuples, variable_count);
 
-    scalarMDFS(algorithm_info, discretized_file, mdfs_output);
-    delete discretized_file;
+    scalarMDFS(mdfs_info, &dataset, mdfs_output);
 
     const int result_members_count = 3;
-
     const int tuples_count = mdfs_output.getMatchingTuplesCount();
 
     SEXP Rout_igs = PROTECT(allocVector(REALSXP, tuples_count));
-    SEXP Rout_tuples = PROTECT(allocMatrix(INTSXP, tuples_count, algorithm_info.dimensions));
+    SEXP Rout_tuples = PROTECT(allocMatrix(INTSXP, tuples_count, mdfs_info.dimensions));
     SEXP Rout_vars = PROTECT(allocVector(INTSXP, tuples_count));
 
     mdfs_output.copyMatchingTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));

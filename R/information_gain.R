@@ -1,3 +1,16 @@
+GetRange <- function (k = 5, n, dimensions, divisions) {
+  ksi <- (k/n)^(1/dimensions)
+  suggested.range <- (1 - ksi*(1+divisions)) / (1 - ksi*(1-divisions))
+  range <- max(0, min(suggested.range, 1))
+  reasonable.range <- 0.25
+  if (range == 0) {
+    warning('Too small sample for the test')
+  } else if (range < reasonable.range) {
+    warning('Too small sample for multiple discretizations')
+  }
+  range
+}
+
 #' Max information gains
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
@@ -79,18 +92,23 @@ ComputeMaxInfoGains <- function(
     stop('Divisions has to be an integer between 1 and 15 (inclusive).')
   }
 
-  if (pseudo.count <= 0) {
-    stop('Pseudo count has to be strictly greater than 0.')
-  }
-
   if (as.integer(discretizations) != discretizations || discretizations < 1) {
     stop('Discretizations has to be a positive integer.')
   }
 
+  if (is.null(pseudo.count)) {
+    if (dimensions == 1 && discretizations <= 5) {
+      pseudo.count <- 0.25
+    } else {
+      pseudo.count <- 2
+    }
+  } else if (!is.numeric(pseudo.count) || pseudo.count <= 0) {
+    stop('Pseudo count has to be a real number strictly greater than 0.')
+  }
+
   if (is.null(range)) {
-    range <- max(min(2*(sqrt(((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1)^2+((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1))-((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1)),
-                     1),
-                 0)
+    min.obj <- min(sum(decision == 0), sum(decision == 1))
+    range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
   } else if (as.double(range) != range || range < 0 || range > 1) {
     stop('Range has to be a number between 0.0 and 1.0')
   }
@@ -246,18 +264,23 @@ ComputeInterestingTuples <- function(
     stop('Divisions has to be an integer between 1 and 15 (inclusive).')
   }
 
-  if (pseudo.count <= 0) {
-    stop('Pseudo count has to be strictly greater than 0.')
-  }
-
   if (as.integer(discretizations) != discretizations || discretizations < 1) {
     stop('Discretizations has to be a positive integer.')
   }
 
+  if (is.null(pseudo.count)) {
+    if (dimensions == 1 && discretizations <= 5) {
+      pseudo.count <- 0.25
+    } else {
+      pseudo.count <- 2
+    }
+  } else if (!is.numeric(pseudo.count) || pseudo.count <= 0) {
+    stop('Pseudo count has to be a real number strictly greater than 0.')
+  }
+
   if (is.null(range)) {
-    range <- max(min(2*(sqrt(((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1)^2+((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1))-((min(sum(decision==0),sum(decision==1))/5)^(2/dimensions)/(1+divisions)^2-1)),
-                     1),
-                 0)
+    min.obj <- min(sum(decision == 0), sum(decision == 1))
+    range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
   } else if (as.double(range) != range || range < 0 || range > 1) {
     stop('Range has to be a number between 0.0 and 1.0')
   }

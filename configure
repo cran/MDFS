@@ -6,7 +6,8 @@ platform=`uname`
 
 makevars_template=Makevars.in
 
-PKG_CXXFLAGS="\$(C_VISIBILITY) -DR_PKG"
+PKG_CPPFLAGS=
+PKG_CXXFLAGS="\$(C_VISIBILITY)"
 PKG_LIBS=
 
 # Linux and Solaris OpenMP implementations are known to work, use them
@@ -22,7 +23,9 @@ if [[ "$platform" == "Linux" ]]; then
   if [[ ! -z "$NVCC" ]]; then
     CUDA_BIN_DIR="`dirname \"$NVCC\"`"
     CUDA_DIR="`dirname \"$CUDA_BIN_DIR\"`"
+    CUDA_INCLUDE_DIR="$CUDA_DIR/include"
     CUDA_LIB_DIR="$CUDA_DIR/lib64"
+    PKG_CPPFLAGS="$PKG_CPPFLAGS -I\"$CUDA_INCLUDE_DIR\""
     PKG_CXXFLAGS="$PKG_CXXFLAGS -DWITH_CUDA"
     PKG_LIBS="$PKG_LIBS -L\"$CUDA_LIB_DIR\" -lcudart"
     makevars_template=Makevars.cuda.in
@@ -36,6 +39,7 @@ if [[ "$platform" == "SunOS" ]]; then
 fi
 
 cat > src/Makevars <<EOF
+PKG_CPPFLAGS = $PKG_CPPFLAGS
 PKG_CXXFLAGS = $PKG_CXXFLAGS
 PKG_LIBS = $PKG_LIBS
 EOF

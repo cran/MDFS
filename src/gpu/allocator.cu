@@ -1,5 +1,3 @@
-#include <iostream>
-#include <cstdio>
 #include "cudaerrchk.cuh"
 #include "allocator.cuh"
 
@@ -19,8 +17,6 @@ static std::string ptrInfo(std::string name,
 void* Allocator::mallocHost(std::size_t size, int line, std::string file) {
 	void* ptr = malloc(size);
 
-	//std::cout << "@1@" << ptr << " " << size << " " << file << line << "\n\n";
-
 	loc[ptr] = ptrInfo("host", ptr, size, line, file);
 	return ptr;
 }
@@ -28,8 +24,6 @@ void* Allocator::mallocHost(std::size_t size, int line, std::string file) {
 void* Allocator::mallocPinned(std::size_t size, int line, std::string file) {
 	void* ptr;
 	CUDA(cudaMallocHost(&ptr, size));
-
-	//std::cout << "@2@" << ptr << "\n\n";
 
 	loc[ptr] = ptrInfo("pinned", ptr, size, line, file);
 	return ptr;
@@ -48,10 +42,10 @@ void Allocator::freeHost(void* ptr) {
 }
 
 void Allocator::freePinned(void* ptr) {
-	//printf("freePinned: %lld\n", ptr);
 	CUDA(cudaFreeHost(ptr));
 	loc.erase(ptr);
 }
+
 void Allocator::freeDevice(void* ptr) {
 	CUDA(cudaFree(ptr));
 	loc.erase(ptr);
@@ -60,7 +54,7 @@ void Allocator::freeDevice(void* ptr) {
 Allocator::~Allocator() {
 	if (!loc.empty()) {
 		for (auto it = loc.begin(); it != loc.end(); ++it) {
-			//std::cerr << (*it).second << std::endl;
+			// TODO: ?
 		}
 	}
 }

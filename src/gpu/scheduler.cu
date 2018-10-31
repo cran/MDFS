@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "scheduler.cuh"
 
 static uint64_t newton(uint64_t n, uint64_t k) {
@@ -25,8 +24,6 @@ void Scheduler::update() {
 	uint64_t off4 = off3 * width;
 
 	pC(discretized, width, pdone, ptodo);
-
-	assert(2 <= dim && dim <= 5);
 
 	if (dim == 2) {
 		for (uint64_t i = 0; i <= last; i++)

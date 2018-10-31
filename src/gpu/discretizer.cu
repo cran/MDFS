@@ -3,8 +3,6 @@
 #include "allocator.cuh"
 #include "discretize.hpp"
 
-#include <iostream>
-
 Discretizer::Discretizer(LaunchConfig lc,
 	InputFile inf,
 	Scheduler *scheduler) : lc(lc), inf(inf),

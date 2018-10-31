@@ -1,6 +1,12 @@
 #ifndef CUCUBES_H
 #define CUCUBES_H
 
+// required to catch possible CUDA exception
+#include "cuda_exception.h"
+
+// required to catch possible NotImplementedException
+#include "not_implemented_exception.h"
+
 void run_cucubes(
 	int n,
 	int k,

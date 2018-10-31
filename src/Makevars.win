@@ -1,5 +1,5 @@
-OBJS_CPU = cpu/datafile.o cpu/discretize.o cpu/discretizedfile.o \
-	cpu/mdfs_common.o cpu/mdfs_scalar.o cpu/stats.o
+OBJS_CPU = cpu/discretize.o cpu/dataset.o \
+	cpu/common.o cpu/mdfs.o cpu/stats.o
 OBJECTS = $(OBJS_CPU) r_init.o r_interface.o
 
 CXX_STD = CXX11

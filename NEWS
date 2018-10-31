@@ -1,6 +1,20 @@
-2018-06-26 | 1.0.1
+1.0.2 | 2018-10-30
 
-* fixed factors as input decision in ComputeMaxInfoGains,
+* improve default range estimation
+
+* allow overriding pseudo.count in MDFS function
+
+* set default p.adjust.method to default p.adjust method ("holm")
+
+* set default level to suggested FWER level (0.05)
+
+* fix CUDA version to not abruptly exit R on error
+
+* fix use.CUDA=T in MDFS function
+
+1.0.1 | 2018-06-26
+
+* fix factors as input decision in ComputeMaxInfoGains,
   ComputeInterestingTuples and MDFS
 
 * fix adjusted.p.value in MDFS

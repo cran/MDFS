@@ -13,7 +13,7 @@ Worker::Worker(int vars,
 	LaunchConfig lc,
 	Calc* calc,
 	Scheduler* scheduler,
-	DataFile df) : workerId(rand()), vars(vars), gpuId(gpuId), lc(lc),
+	DataFile df) : vars(vars), gpuId(gpuId), lc(lc),
 	calc(calc), scheduler(scheduler), df(df) {
 
 	CUDA(cudaSetDevice(gpuId));
@@ -69,7 +69,6 @@ Worker::~Worker() {
 
 void Worker::workLoop() {
 	CUDA(cudaSetDevice(gpuId));
-	//printf("cudaSetDevice(%d)\n", gpuId);
 
 	for (int i = 0; true; i ^= 1) {
 		scheduler->mutex.lock();
