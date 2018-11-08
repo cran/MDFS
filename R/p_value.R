@@ -324,9 +324,13 @@ RelevantVariables <- function(fs, ...) {
 
 #' Find indices of relevant variables from MDFS
 #'
+#' @details
+#' In case of FDR control it is recommended to use Benjamini-Hochberg-Yekutieli p-value adjustment
+#' method (\code{"BY"} in \code{\link[stats]{p.adjust}}) due to unknown dependencies between tests.
+#'
 #' @param fs an MDFS object
 #' @param level statistical significance level
-#' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}}
+#' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)
 #' @param ... ignored
 #' @return indices of relevant variables
 #' @importFrom stats p.adjust

@@ -26,7 +26,7 @@ MDFS(data, decision, n.contrast = max(ncol(data)/10, 30), dimensions = 1,
 
 \item{pseudo.count}{pseudo count}
 
-\item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}}}
+\item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)}
 
 \item{level}{statistical significance level}
 
@@ -49,6 +49,10 @@ A \code{\link{list}} with the following fields:
 }
 \description{
 Run end-to-end MDFS
+}
+\details{
+In case of FDR control it is recommended to use Benjamini-Hochberg-Yekutieli p-value adjustment
+method (\code{"BY"} in \code{\link[stats]{p.adjust}}) due to unknown dependencies between tests.
 }
 \examples{
 \donttest{

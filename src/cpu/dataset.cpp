@@ -33,8 +33,9 @@ DataSet::DataSet(void) {
 }
 
 DataSet::~DataSet() {
+    // TODO: check each whether initialized or move to constructor or just redesign it...
     delete[] this->data;
-    delete[] this->info;  // Should check whether is initialized?
+    delete this->info;
 }
 
 void DataSet::loadData(RawData* rawdata, DiscretizationInfo discretization_info) {
@@ -55,14 +56,14 @@ void DataSet::discretizeVar(
 
     for (int d = 0; d < info.discretizations; ++d) {
         discretize(
-            info.seed, 
-            d, 
-            var_index, 
-            info.divisions, 
-            in->info.object_count, 
-            in_data, 
-            sorted_in_data, 
-            this->getDiscretizationData(var_index, d), 
+            info.seed,
+            d,
+            var_index,
+            info.divisions,
+            in->info.object_count,
+            in_data,
+            sorted_in_data,
+            this->getDiscretizationData(var_index, d),
             info.range
         );
     }

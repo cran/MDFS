@@ -1,10 +1,10 @@
-1ea5d3a7f1c8ea2185f8e167072e4a9f *DESCRIPTION
+39450f689ac5fbcaebf7a99c00a2ebd0 *DESCRIPTION
 0947f268c66e4b2203016b976852f8ec *NAMESPACE
-0b0a1758ae3efe8e21a32c89202bf667 *NEWS
+aba149a208f56b1b2e891a8c49fdf30b *NEWS
 2c10bcf5139345dc16e0eaf4153ce26c *R/data.R
 b381afe7edcdb3071b59d5272676a33b *R/information_gain.R
-3a6ecab954138ed32791f68fe6647fcb *R/main.R
-24ed613804186d6e02d51b9f726f33e1 *R/p_value.R
+451d080ea137e1bd869db0e6c2e35462 *R/main.R
+7315af7ae86fcf040849881920d80d26 *R/p_value.R
 8be338212a731c8145654310ae824b9f *R/utils.R
 1eb7ffc80d3f154494861d6b0f988b8c *cleanup
 bb6ba154c464e99146ac271a9c12def9 *cleanup.win
@@ -14,8 +14,8 @@ f7eefa5d1978edf1233254e24f011a4f *data/madelon.RData
 2e7529d76d038c564564208d4d019162 *man/ComputeInterestingTuples.Rd
 ef314db03d419b7141ad612460a4dc23 *man/ComputeMaxInfoGains.Rd
 cd64e4c4659373e5410b6779685a2363 *man/ComputePValue.Rd
-c7140d85cde57e4c263a0ae5c2ec2fe3 *man/MDFS.Rd
-967846d7f7ca222ee17323586b7e69df *man/RelevantVariables.MDFS.Rd
+42b3c75734928a66a8a0bc6565587443 *man/MDFS.Rd
+b7cc0518f76941b5e66f3f718a8fd0be *man/RelevantVariables.MDFS.Rd
 ea828b2f8bc61e37570fc987a92d4ba5 *man/RelevantVariables.Rd
 5daa0029d9954faa0a350151304e57ed *man/as.data.frame.MDFS.Rd
 9d2898fa3f3194aa6afdf58f34e07e3a *man/madelon.Rd
@@ -26,7 +26,7 @@ ea828b2f8bc61e37570fc987a92d4ba5 *man/RelevantVariables.Rd
 9f0c838e8c1919eb8739ed137653187b *src/Makevars.win
 9f54220ca403895e3c1a15dea4aa09af *src/cpu/common.cpp
 e311be0f6a9b75edd6c861e54eec574d *src/cpu/common.h
-cca1e0662bfd4835335f638f1c63dbef *src/cpu/dataset.cpp
+38969929f1e8f84ebf9cdbf35c574a1c *src/cpu/dataset.cpp
 a996b5ebad6fbaeefa3396ae852fff97 *src/cpu/dataset.h
 13fda445a4db92f8c94c84f4cd1d2994 *src/cpu/discretize.cpp
 fa2866d230ae92bcbe3cf0adac376e39 *src/cpu/discretize.h

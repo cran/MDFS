@@ -1,5 +1,9 @@
 #' Run end-to-end MDFS
 #'
+#' @details
+#' In case of FDR control it is recommended to use Benjamini-Hochberg-Yekutieli p-value adjustment
+#' method (\code{"BY"} in \code{\link[stats]{p.adjust}}) due to unknown dependencies between tests.
+#'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a boolean vector of length equal to number of observations
 #' @param n.contrast number of constrast variables (defaults to max of 1/10 of variables number and 30)
@@ -8,7 +12,7 @@
 #' @param discretizations number of discretizations
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
 #' @param pseudo.count pseudo count
-#' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}}
+#' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)
 #' @param level statistical significance level
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
 #' @param use.CUDA whether to use CUDA acceleration (must be compiled with CUDA)

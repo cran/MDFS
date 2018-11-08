@@ -12,7 +12,7 @@
 
 \item{level}{statistical significance level}
 
-\item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}}}
+\item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)}
 
 \item{...}{ignored}
 }
@@ -21,4 +21,8 @@ indices of relevant variables
 }
 \description{
 Find indices of relevant variables from MDFS
+}
+\details{
+In case of FDR control it is recommended to use Benjamini-Hochberg-Yekutieli p-value adjustment
+method (\code{"BY"} in \code{\link[stats]{p.adjust}}) due to unknown dependencies between tests.
 }

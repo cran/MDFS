@@ -1,4 +1,10 @@
-1.0.2 | 2018-10-30
+1.0.3 | 2018-11-07
+
+* add note about recommended FDR control method
+
+* fix a possible memory error introduced in 1.0.2 (mismatched new/delete[] operators)
+
+1.0.2 | 2018-10-31
 
 * improve default range estimation
 
