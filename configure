@@ -12,15 +12,15 @@ PKG_LIBS=
 
 # Linux and Solaris OpenMP implementations are known to work, use them
 # TODO: discover the proper way to activate OpenMP
-if [[ "$platform" == "Linux" || "$platform" == "SunOS" ]]; then
+if [ "$platform" = "Linux" ] || [ "$platform" = "SunOS" ]; then
   PKG_CXXFLAGS="$PKG_CXXFLAGS \$(SHLIB_OPENMP_CXXFLAGS)"
   PKG_LIBS="$PKG_LIBS \$(SHLIB_OPENMP_CXXFLAGS)"
 fi
 
 # we support CUDA on Linux only
-if [[ "$platform" == "Linux" ]]; then
+if [ "$platform" = "Linux" ]; then
   NVCC=`which nvcc 2>/dev/null`
-  if [[ ! -z "$NVCC" ]]; then
+  if [ ! -z "$NVCC" ]; then
     CUDA_BIN_DIR="`dirname \"$NVCC\"`"
     CUDA_DIR="`dirname \"$CUDA_BIN_DIR\"`"
     CUDA_INCLUDE_DIR="$CUDA_DIR/include"
@@ -34,7 +34,7 @@ fi
 
 # R on Solaris uses -G which does not link libstdc++
 # use -shared to fix
-if [[ "$platform" == "SunOS" ]]; then
+if [ "$platform" = "SunOS" ]; then
   PKG_LIBS="$PKG_LIBS -shared"
 fi
 

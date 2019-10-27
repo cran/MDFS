@@ -11,7 +11,7 @@
 #' @param divisions number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)
 #' @param discretizations number of discretizations
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
-#' @param pseudo.count pseudo count
+#' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
 #' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)
 #' @param level statistical significance level
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
@@ -42,7 +42,7 @@ MDFS <- function(
   divisions = NULL,
   discretizations = 1,
   range = NULL,
-  pseudo.count = 0.25,
+  pc.xi = 0.25,
   p.adjust.method = "holm",
   level = 0.05,
   seed = NULL,
@@ -62,7 +62,7 @@ MDFS <- function(
 
  MIG.Result <- ComputeMaxInfoGains(data.contrast, decision,
   dimensions = dimensions, divisions = divisions,
-  discretizations = discretizations, range = range, pseudo.count = pseudo.count,
+  discretizations = discretizations, range = range, pc.xi = pc.xi,
   seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
 
  divisions <- attr(MIG.Result, "run.params")$divisions

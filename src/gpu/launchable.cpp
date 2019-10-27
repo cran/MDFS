@@ -1,4 +1,4 @@
-#include "launchable.cuh"
+#include "launchable.h"
 
 void Launch(Launchable *w) {
 	w->workLoop();

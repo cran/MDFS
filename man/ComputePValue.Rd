@@ -4,11 +4,11 @@
 \alias{ComputePValue}
 \title{Compute p-values from information gains and return MDFS}
 \usage{
-ComputePValue(IG, dimensions, divisions, response.divisions = 1, df = NULL,
-  contrast.mask = NULL, ig.in.bits = TRUE, ig.doubled = FALSE,
-  one.dim.mode = "exp", irr.vars.num = NULL, ign.low.ig.vars.num = NULL,
-  min.irr.vars.num = NULL, max.ign.low.ig.vars.num = NULL,
-  search.points = 8, level = 0.05)
+ComputePValue(IG, dimensions, divisions, response.divisions = 1,
+  df = NULL, contrast.mask = NULL, ig.in.bits = TRUE,
+  ig.doubled = FALSE, one.dim.mode = "exp", irr.vars.num = NULL,
+  ign.low.ig.vars.num = NULL, min.irr.vars.num = NULL,
+  max.ign.low.ig.vars.num = NULL, search.points = 8, level = 0.05)
 }
 \arguments{
 \item{IG}{max conditional information gains}
@@ -39,7 +39,7 @@ ComputePValue(IG, dimensions, divisions, response.divisions = 1, df = NULL,
 
 \item{search.points}{number of points in search procedure for the optimal number of ignored variables}
 
-\item{level}{acceptable error level of goodness-of-fit test (used only for warning)}
+\item{level}{acceptable error level of goodness-of-fit one-sample Kolmogorov-Smirnov test (used only for warning)}
 }
 \value{
 A \code{\link{data.frame}} with class set to \code{MDFS}. Can be coerced back to \code{data.frame} using \code{\link{as.data.frame}}.

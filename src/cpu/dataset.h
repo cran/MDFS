@@ -6,10 +6,10 @@
 
 class RawDataInfo {
 public:
-    RawDataInfo(int object_count, int variable_count);
+    RawDataInfo(size_t object_count, size_t variable_count);
 
-    int object_count;
-    int variable_count;
+    size_t object_count;
+    size_t variable_count;
 };
 
 //Stored in VO way
@@ -23,28 +23,24 @@ public:
     const int* decision;
 
     // returns pointer to array (info.object_count length) with requested variable
-    const double* getVariable(int var_index) const;
+    const double* getVariable(size_t var_index) const;
 };
 
 class DiscretizationInfo {
 public:
-    DiscretizationInfo(uint32_t seed, int disc, int div, double range);
+    DiscretizationInfo(uint32_t seed, size_t disc, size_t div, double range);
 
     uint32_t seed;
-    int discretizations;
-    int divisions;
+    size_t discretizations;
+    size_t divisions;
     double range;
 };
 
-class DataSetInfo {
-public:
-    DataSetInfo(int discretizations, int object_count, int variable_count);
-
-    size_t getAllocSize();
-
-    int discretizations;
-    int object_count;
-    int variable_count;
+struct DataSetInfo {
+    size_t discretizations;
+    size_t object_count;
+    size_t variable_count;
+    size_t object_count_per_class[2];
 };
 
 // Stored in VDO way
@@ -67,7 +63,7 @@ public:
 
     void discretizeVar(
         RawData* in,
-        int var_index,
+        size_t var_index,
         DiscretizationInfo info
     );
 
@@ -76,11 +72,9 @@ public:
     const int *decision;
 
     // returns pointer to array containing discretized v-variable with d-discretization
-    uint8_t *getDiscretizationData(int var_index, int dis_index);
-
-    int get_dec_count(int value);
-    int c0();
-    int c1();
+    inline uint8_t* getDiscretizationData(size_t var_index, size_t dis_index) const {
+        return this->data + this->info->object_count * (var_index * this->info->discretizations + dis_index);
+    }
 };
 
 #endif

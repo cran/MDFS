@@ -1,12 +1,15 @@
 #include <thread>
 #include <chrono>
 #include <vector>
-#include "worker.cuh"
-#include "calc.cuh"
-#include "cudaerrchk.cuh"
-#include "allocator.cuh"
-#include "kernellauncher.cuh"
-#include "datafile.cuh"
+#include "worker.h"
+#include "calc.h"
+#include "cudaerrchk.h"
+#include "allocator.h"
+#include "kernellauncher.h"
+#include "datafile.h"
+
+// std::memcpy
+#include <cstring>
 
 Worker::Worker(int vars,
 	int gpuId,
@@ -103,7 +106,7 @@ void Worker::process(uint64_t packId, int strNum) {
 	std::size_t tileLen = lc.tileSize * varLen;
 	for (std::size_t i = 0; i < lc.dim; i++) {
 		for (std::size_t j = 0; j < lc.disc; j++) {
-			memcpy(data[strNum][i] + (j * tileLen),
+			std::memcpy(data[strNum][i] + (j * tileLen),
 				df.data + (j * discLen + offset[i] * tileLen),
 				tileLen * sizeof(uint64_t));
 		}

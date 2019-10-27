@@ -14,7 +14,7 @@
 #' @param min.irr.vars.num minimum number of irrelevant variables (\code{NULL} selects probable optimal number)
 #' @param max.ign.low.ig.vars.num maximum number of ignored low IG variables (\code{NULL} selects probable optimal number)
 #' @param search.points number of points in search procedure for the optimal number of ignored variables
-#' @param level acceptable error level of goodness-of-fit test (used only for warning)
+#' @param level acceptable error level of goodness-of-fit one-sample Kolmogorov-Smirnov test (used only for warning)
 #' @return A \code{\link{data.frame}} with class set to \code{MDFS}. Can be coerced back to \code{data.frame} using \code{\link{as.data.frame}}.
 #'
 #'  The following columns are present:

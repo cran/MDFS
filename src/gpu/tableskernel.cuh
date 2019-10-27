@@ -2,8 +2,9 @@
 #define TABLESKERNEL_CUH
 
 #include <stdint.h>
-#include "kernels.cuh"
-#include "cudaerrchk.cuh"
+#include "kernel_param.h"
+#include "utils.cuh"
+#include "cudaerrchk.h"
 
 template<typename CType,
 	int TILE_SIZE,

@@ -6,8 +6,9 @@
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
 static const R_CallMethodDef callMethods[]  = {
-  CALLDEF(r_compute_max_ig, 11),
-  CALLDEF(r_compute_all_matching_tuples, 10),
+  CALLDEF(r_compute_max_ig, 12),
+  CALLDEF(r_compute_all_matching_tuples, 11),
+  CALLDEF(r_discretize, 6),
   {NULL, NULL, 0}
 };
 

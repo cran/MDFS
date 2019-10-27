@@ -15,19 +15,21 @@ GetRange <- function (k = 5, n, dimensions, divisions) {
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
-#' @param dimensions number of dimensions (a positive integer; on CUDA limited to 2--5 range)
+#' @param dimensions number of dimensions (a positive integer; 5 max)
 #' @param divisions number of divisions (from 1 to 15; additionally limited by dimensions if using CUDA; \code{NULL} selects probable optimal number)
 #' @param discretizations number of discretizations
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
-#' @param pseudo.count pseudo count
-#' @param return.tuples whether to return tuples where max IG was observed (one tuple per variable) - not supported with CUDA and in 1D
-#' @param interesting.vars limit examined tuples to only those containing all specified variables (default: do not limit) - not supported with CUDA
+#' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
+#' @param return.tuples whether to return tuples (and relevant discretization number) where max IG was observed (one tuple and relevant discretization number per variable) - not supported with CUDA nor in 1D
+#' @param interesting.vars variables for which to check the IGs (none = all) - not supported with CUDA
+#' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
 #' @param use.CUDA whether to use CUDA acceleration (must be compiled with CUDA)
 #' @return A \code{\link{data.frame}} with the following columns:
 #'  \itemize{
 #'    \item \code{IG} -- max information gain (of each variable)
-#'    \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns, available only when \code{return.tuples == T} and \code{dimensions > 1})
+#'    \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns, available only when \code{return.tuples == T})
+#'    \item \code{Discretization.nr} -- corresponding discretization number (available only when \code{return.tuples == T})
 #'  }
 #'
 #'  Additionally attribute named \code{run.params} with run parameters is set on the result.
@@ -47,9 +49,10 @@ ComputeMaxInfoGains <- function(
     discretizations = 1,
     seed = NULL,
     range = NULL,
-    pseudo.count = 0.25,
+    pc.xi = 0.25,
     return.tuples = FALSE,
-    interesting.vars = c(),
+    interesting.vars = vector(mode = "integer"),
+    require.all.vars = FALSE,
     use.CUDA = FALSE) {
   data <- data.matrix(data)
   storage.mode(data) <- "double"
@@ -76,6 +79,10 @@ ComputeMaxInfoGains <- function(
     stop('Dimensions has to be a positive integer.')
   }
 
+  if (dimensions > 5) {
+    stop('Dimensions cannot exceed 5')
+  }
+
   if (is.null(divisions)) {
     if (dimensions == 1) {
       divisions <- as.integer(
@@ -96,14 +103,14 @@ ComputeMaxInfoGains <- function(
     stop('Discretizations has to be a positive integer.')
   }
 
-  if (is.null(pseudo.count)) {
+  if (is.null(pc.xi)) {
     if (dimensions == 1 && discretizations <= 5) {
-      pseudo.count <- 0.25
+      pc.xi <- 0.25
     } else {
-      pseudo.count <- 2
+      pc.xi <- 2
     }
-  } else if (!is.numeric(pseudo.count) || pseudo.count <= 0) {
-    stop('Pseudo count has to be a real number strictly greater than 0.')
+  } else if (!is.numeric(pc.xi) || pc.xi <= 0) {
+    stop('pc.xi has to be a real number strictly greater than 0.')
   }
 
   if (is.null(range)) {
@@ -132,10 +139,6 @@ ComputeMaxInfoGains <- function(
       stop('CUDA acceleration does not support 1 dimension')
     }
 
-    if (dimensions > 5) {
-      stop('CUDA acceleration does not support more than 5 dimensions')
-    }
-
     if ((divisions+1)^dimensions > 256) {
       stop('CUDA acceleration does not support more than 256 cubes = (divisions+1)^dimensions')
     }
@@ -158,14 +161,16 @@ ComputeMaxInfoGains <- function(
       as.integer(discretizations),
       as.integer(seed),
       as.double(range),
-      as.double(pseudo.count),
-      as.integer(interesting.vars - 1),  # send C-compatible 0-based indices
+      as.double(pc.xi),
+      as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
+      as.logical(require.all.vars),
       as.logical(return.tuples),
       as.logical(use.CUDA))
 
   if (return.tuples) {
-    names(out) <- c("IG", "Tuple")
+    names(out) <- c("IG", "Tuple", "Discretization.nr")
     out$Tuple = t(out$Tuple + 1) # restore R-compatible 1-based indices, transpose to remain compatible with ComputeInterestingTuples
+    out$Discretization.nr = out$Discretization.nr + 1 # restore R-compatible 1-based indices
   } else {
     names(out) <- c("IG")
   }
@@ -178,7 +183,7 @@ ComputeMaxInfoGains <- function(
     discretizations = discretizations,
     seed            = seed,
     range           = range,
-    pseudo.count    = pseudo.count)
+    pc.xi           = pc.xi)
 
   return(out)
 }
@@ -187,14 +192,15 @@ ComputeMaxInfoGains <- function(
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
-#' @param dimensions number of dimensions (an integer greater than or equal to 2)
+#' @param dimensions number of dimensions (a positive integer; 5 max)
 #' @param divisions number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)
 #' @param discretizations number of discretizations
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
-#' @param pseudo.count pseudo count
+#' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
 #' @param ig.thr IG threshold above which the tuple is interesting
 #' @param interesting.vars variables for which to check the IGs (none = all)
+#' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
 #' @return A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.
 #'
 #'  The following columns are present in the \code{\link{data.frame}}:
@@ -220,9 +226,10 @@ ComputeInterestingTuples <- function(
     discretizations = 1,
     seed = NULL,
     range = NULL,
-    pseudo.count = 0.25,
+    pc.xi = 0.25,
     ig.thr,
-    interesting.vars = c()) {
+    interesting.vars = vector(mode = "integer"),
+    require.all.vars = FALSE) {
   data <- data.matrix(data)
   storage.mode(data) <- "double"
   decision <- as.vector(decision, mode="integer")
@@ -248,6 +255,10 @@ ComputeInterestingTuples <- function(
     stop('Dimensions has to be a positive integer.')
   }
 
+  if (dimensions > 5) {
+    stop('Dimensions cannot exceed 5')
+  }
+
   if (is.null(divisions)) {
     if (dimensions == 1) {
       divisions <- as.integer(
@@ -268,14 +279,14 @@ ComputeInterestingTuples <- function(
     stop('Discretizations has to be a positive integer.')
   }
 
-  if (is.null(pseudo.count)) {
+  if (is.null(pc.xi)) {
     if (dimensions == 1 && discretizations <= 5) {
-      pseudo.count <- 0.25
+      pc.xi <- 0.25
     } else {
-      pseudo.count <- 2
+      pc.xi <- 2
     }
-  } else if (!is.numeric(pseudo.count) || pseudo.count <= 0) {
-    stop('Pseudo count has to be a real number strictly greater than 0.')
+  } else if (!is.numeric(pc.xi) || pc.xi <= 0) {
+    stop('pc.xi has to be a real number strictly greater than 0.')
   }
 
   if (is.null(range)) {
@@ -308,8 +319,9 @@ ComputeInterestingTuples <- function(
       as.integer(discretizations),
       as.integer(seed),
       as.double(range),
-      as.double(pseudo.count),
-      as.integer(interesting.vars - 1),  # send C-compatible 0-based indices
+      as.double(pc.xi),
+      as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
+      as.logical(require.all.vars),
       as.double(ig.thr))
 
   if (length(result[[1]]) == 0) {
@@ -330,7 +342,75 @@ ComputeInterestingTuples <- function(
     discretizations = discretizations,
     seed            = seed,
     range           = range,
-    pseudo.count    = pseudo.count)
+    pc.xi           = pc.xi)
+
+  return(result)
+}
+
+#' Discretize variable on demand
+#'
+#' @param data input data where columns are variables and rows are observations (all numeric)
+#' @param variable.idx variable index (as it appears in \code{data})
+#' @param divisions number of divisions
+#' @param discretization.nr discretization number (positive integer)
+#' @param seed seed for PRNG
+#' @param range discretization range
+#' @return Discretized variable.
+#' @examples
+#' Discretize(madelon$data, 3, 1, 1, 0, 0.5)
+#' @export
+#' @useDynLib MDFS r_discretize
+Discretize <- function(
+    data,
+    variable.idx,
+    divisions,
+    discretization.nr,
+    seed,
+    range) {
+  data <- data.matrix(data)
+  storage.mode(data) <- "double"
+
+  if (as.integer(divisions) != divisions || divisions < 1 || divisions > 15) {
+    stop('Divisions has to be an integer between 1 and 15 (inclusive).')
+  }
+
+  if (as.integer(variable.idx) != variable.idx || variable.idx < 1) {
+    stop('variable.idx has to be a positive integer.')
+  }
+
+  if (variable.idx > dim(data)[2]) {
+    stop('variable.idx has to be in data bounds.')
+  }
+
+  if (as.integer(discretization.nr) != discretization.nr || discretization.nr < 1) {
+    stop('discretization.nr has to be a positive integer.')
+  }
+
+  if (as.double(range) != range || range < 0 || range > 1) {
+    stop('Range has to be a number between 0.0 and 1.0')
+  }
+
+  if (as.integer(seed) != seed || seed < 0 || seed > 2^31-1) {
+    warning('Only integer seeds from 0 to 2^31-1 are portable. Using non-portable seed may make result harder to reproduce.')
+  }
+
+  variable <- data[, variable.idx]
+
+  result <- .Call(
+      r_discretize,
+      variable,
+      as.integer(variable.idx - 1), # convert to C 0-based
+      as.integer(divisions),
+      as.integer(discretization.nr - 1), # convert to C 0-based
+      as.integer(seed),
+      as.double(range))
+
+  attr(result, 'run.params') <- list(
+    variable.idx      = variable.idx,
+    divisions         = divisions,
+    discretization.nr = discretization.nr,
+    seed              = seed,
+    range             = range)
 
   return(result)
 }

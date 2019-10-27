@@ -2,7 +2,10 @@
 #define KERNELLAUNCHER_CUH
 
 #include <vector>
-#include "launchconfig.cuh"
+#include "launchconfig.h"
+
+// cudaStream_t
+#include <cuda_runtime_api.h>
 
 void tablesKernelLauncher(int vars,
 	FileInfo fi,

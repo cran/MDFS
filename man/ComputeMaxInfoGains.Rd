@@ -5,15 +5,16 @@
 \title{Max information gains}
 \usage{
 ComputeMaxInfoGains(data, decision, dimensions = 1, divisions = NULL,
-  discretizations = 1, seed = NULL, range = NULL, pseudo.count = 0.25,
-  return.tuples = FALSE, interesting.vars = c(), use.CUDA = FALSE)
+  discretizations = 1, seed = NULL, range = NULL, pc.xi = 0.25,
+  return.tuples = FALSE, interesting.vars = vector(mode = "integer"),
+  require.all.vars = FALSE, use.CUDA = FALSE)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
 
 \item{decision}{decision variable as a binary sequence of length equal to number of observations}
 
-\item{dimensions}{number of dimensions (a positive integer; on CUDA limited to 2--5 range)}
+\item{dimensions}{number of dimensions (a positive integer; 5 max)}
 
 \item{divisions}{number of divisions (from 1 to 15; additionally limited by dimensions if using CUDA; \code{NULL} selects probable optimal number)}
 
@@ -23,11 +24,13 @@ ComputeMaxInfoGains(data, decision, dimensions = 1, divisions = NULL,
 
 \item{range}{discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)}
 
-\item{pseudo.count}{pseudo count}
+\item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
-\item{return.tuples}{whether to return tuples where max IG was observed (one tuple per variable) - not supported with CUDA and in 1D}
+\item{return.tuples}{whether to return tuples (and relevant discretization number) where max IG was observed (one tuple and relevant discretization number per variable) - not supported with CUDA nor in 1D}
 
-\item{interesting.vars}{limit examined tuples to only those containing all specified variables (default: do not limit) - not supported with CUDA}
+\item{interesting.vars}{variables for which to check the IGs (none = all) - not supported with CUDA}
+
+\item{require.all.vars}{boolean whether to require tuple to consist of only interesting.vars}
 
 \item{use.CUDA}{whether to use CUDA acceleration (must be compiled with CUDA)}
 }
@@ -35,7 +38,8 @@ ComputeMaxInfoGains(data, decision, dimensions = 1, divisions = NULL,
 A \code{\link{data.frame}} with the following columns:
  \itemize{
    \item \code{IG} -- max information gain (of each variable)
-   \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns, available only when \code{return.tuples == T} and \code{dimensions > 1})
+   \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns, available only when \code{return.tuples == T})
+   \item \code{Discretization.nr} -- corresponding discretization number (available only when \code{return.tuples == T})
  }
 
  Additionally attribute named \code{run.params} with run parameters is set on the result.

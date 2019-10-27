@@ -4,16 +4,17 @@
 \alias{ComputeInterestingTuples}
 \title{Interesting tuples}
 \usage{
-ComputeInterestingTuples(data, decision, dimensions = 2, divisions = NULL,
-  discretizations = 1, seed = NULL, range = NULL, pseudo.count = 0.25,
-  ig.thr, interesting.vars = c())
+ComputeInterestingTuples(data, decision, dimensions = 2,
+  divisions = NULL, discretizations = 1, seed = NULL, range = NULL,
+  pc.xi = 0.25, ig.thr, interesting.vars = vector(mode = "integer"),
+  require.all.vars = FALSE)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
 
 \item{decision}{decision variable as a binary sequence of length equal to number of observations}
 
-\item{dimensions}{number of dimensions (an integer greater than or equal to 2)}
+\item{dimensions}{number of dimensions (a positive integer; 5 max)}
 
 \item{divisions}{number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)}
 
@@ -23,11 +24,13 @@ ComputeInterestingTuples(data, decision, dimensions = 2, divisions = NULL,
 
 \item{range}{discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)}
 
-\item{pseudo.count}{pseudo count}
+\item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
 \item{ig.thr}{IG threshold above which the tuple is interesting}
 
 \item{interesting.vars}{variables for which to check the IGs (none = all)}
+
+\item{require.all.vars}{boolean whether to require tuple to consist of only interesting.vars}
 }
 \value{
 A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.

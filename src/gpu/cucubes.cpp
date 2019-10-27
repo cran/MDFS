@@ -1,6 +1,6 @@
 #include <sys/time.h>
 #include "cucubes.h"
-#include "calc.cuh"
+#include "calc.h"
 
 void nopCallback(int a, int b, int c, int d) {
 }

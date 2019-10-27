@@ -1,7 +1,10 @@
 #include <cmath>
-#include "discretizer.cuh"
-#include "allocator.cuh"
+#include "discretizer.h"
+#include "allocator.h"
 #include "discretize.hpp"
+
+// std::memset
+#include <cstring>
 
 Discretizer::Discretizer(LaunchConfig lc,
 	InputFile inf,
@@ -39,12 +42,12 @@ Discretizer::Discretizer(LaunchConfig lc,
 
 	df.data = (uint64_t*) MALLOC_HOST(df.fi.ndis * df.fi.nvar * df.fi.varsize);
 
-	memset(df.data, 0, df.fi.ndis * df.fi.nvar * df.fi.varsize);
+	std::memset(df.data, 0, df.fi.ndis * df.fi.nvar * df.fi.varsize);
 
 	df.counters = (uint64_t*) MALLOC_PINNED(
 		df.fi.ndis * df.fi.nvar * df.fi.ncls * sizeof(uint64_t));
 
-	memset(df.counters, 0, df.fi.ndis * df.fi.nvar * df.fi.ncls * sizeof(uint64_t));
+	std::memset(df.counters, 0, df.fi.ndis * df.fi.nvar * df.fi.ncls * sizeof(uint64_t));
 }
 
 Discretizer::~Discretizer() {

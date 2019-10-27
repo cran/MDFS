@@ -1,4 +1,4 @@
-#include "scheduler.cuh"
+#include "scheduler.h"
 
 static uint64_t newton(uint64_t n, uint64_t k) {
 	uint64_t ret = 1;

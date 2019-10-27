@@ -4,10 +4,10 @@
 \alias{MDFS}
 \title{Run end-to-end MDFS}
 \usage{
-MDFS(data, decision, n.contrast = max(ncol(data)/10, 30), dimensions = 1,
-  divisions = NULL, discretizations = 1, range = NULL,
-  pseudo.count = 0.25, p.adjust.method = "holm", level = 0.05,
-  seed = NULL, use.CUDA = FALSE)
+MDFS(data, decision, n.contrast = max(ncol(data)/10, 30),
+  dimensions = 1, divisions = NULL, discretizations = 1,
+  range = NULL, pc.xi = 0.25, p.adjust.method = "holm",
+  level = 0.05, seed = NULL, use.CUDA = FALSE)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
@@ -24,7 +24,7 @@ MDFS(data, decision, n.contrast = max(ncol(data)/10, 30), dimensions = 1,
 
 \item{range}{discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)}
 
-\item{pseudo.count}{pseudo count}
+\item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
 \item{p.adjust.method}{method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)}
 

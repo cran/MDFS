@@ -19,12 +19,11 @@ void discretize(
 ) {
     double* thresholds = new double[divisions];
 
-    // Note: do we need those brackets?
+    // brackets to limit scope
     {
         double sum = 0.0f;
-        // Note: ditto, brackets
+        // brackets to limit scope
         {
-            // Note: why not single mt19937 with multiple XOR's? Similar numbers (0, 1, ...)?
             std::mt19937 seed_random_generator0(seed);
             std::mt19937 seed_random_generator1(seed_random_generator0() ^ discretization_index);
             std::mt19937 random_generator(seed_random_generator1() ^ feature_id);
@@ -43,8 +42,8 @@ void discretize(
         std::size_t done = 0;
         const double length_step = static_cast<double>(object_count) / sum;
 
-        // thresholds are converted from arbitrary space in to indexes of value-sorted object space.
-        // d - iterates over divisions (of a variable of a discretization)
+        // thresholds are converted from an arbitrary space into real values (via indices)
+        // d - iterates over divisions (of a variable in a discretization)
         for (std::size_t d = 0; d < divisions; ++d) {
             done += std::lround(thresholds[d] * length_step);
 
@@ -61,10 +60,9 @@ void discretize(
     for (std::size_t o = 0; o < object_count; ++o) {
         out_data[o] = 0;
 
-        // Note: O(o * d) -> O(o * log(d)) optimization opportunity: binsearch
-
-        // out_data[o] is incremented every time in_data[o] is above given threashold
-        // d - iterates over divisions per object o
+        // out_data[o] (starting with 0) is incremented every time in_data[o] is above a threshold
+        // divisions is a small number (<=15), no reason to use binsearch, hence linear
+        // d - iterates over divisions (per object o)
         for (std::size_t d = 0; d < divisions; ++d) {
             out_data[o] += in_data[o] > thresholds[d];
         }

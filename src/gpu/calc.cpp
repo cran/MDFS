@@ -1,6 +1,9 @@
-#include "calc.cuh"
-#include "launchable.cuh"
-#include "cudaerrchk.cuh"
+#include "calc.h"
+#include "launchable.h"
+#include "cudaerrchk.h"
+
+// std::memset
+#include <cstring>
 
 Calc::Calc(LaunchConfig lc,
 	InputFile inf,
@@ -12,7 +15,7 @@ Calc::Calc(LaunchConfig lc,
 
 	df = discretizer.getDataFile();
 
-	memset(IGmax, 0, inf.vars * sizeof(double));
+	std::memset(IGmax, 0, inf.vars * sizeof(double));
 
 	int workerCount;
 	CUDA(cudaGetDeviceCount(&workerCount));

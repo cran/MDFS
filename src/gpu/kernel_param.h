@@ -1,20 +1,13 @@
-#ifndef KERNELS_CUH
-#define KERNELS_CUH
+#ifndef KERNEL_PARAM_H
+#define KERNEL_PARAM_H
 
 #include <ostream>
 #include <vector>
 #include <stdint.h>
-#include "launchconfig.cuh"
+#include "launchconfig.h"
 
-__device__ __host__ __forceinline__
-constexpr int pow(int a, int b) {
-	return b < 1 ? 1 : a * pow(a, b - 1);
-}
-
-__device__ __host__ __forceinline__
-constexpr int blockSize(int dim) {
-	return dim == 2 ? 16 : 1 << (10 / dim);
-}
+// cudaStream_t
+#include <cuda_runtime_api.h>
 
 #define MAX_DIM 5
 

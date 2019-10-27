@@ -3,9 +3,12 @@
 
 #include <stdint.h>
 #include <vector>
-#include "launchable.cuh"
-#include "launchconfig.cuh"
-#include "scheduler.cuh"
+#include "launchable.h"
+#include "launchconfig.h"
+#include "scheduler.h"
+
+// cudaStream_t
+#include <cuda_runtime_api.h>
 
 class Calc;
 

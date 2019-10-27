@@ -1,5 +1,5 @@
-#include "kernellauncher.cuh"
-#include "kernels.cuh"
+#include "kernellauncher.h"
+#include "kernel_param.h"
 #include "not_implemented_exception.h"
 
 #include <sstream>

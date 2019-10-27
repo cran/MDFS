@@ -1,5 +1,5 @@
-#include "cudaerrchk.cuh"
-#include "allocator.cuh"
+#include "cudaerrchk.h"
+#include "allocator.h"
 
 Allocator _alloc;
 

@@ -4,10 +4,10 @@
 #include <mutex>
 #include <vector>
 #include <thread>
-#include "worker.cuh"
-#include "discretizer.cuh"
-#include "scheduler.cuh"
-#include "launchconfig.cuh"
+#include "worker.h"
+#include "discretizer.h"
+#include "scheduler.h"
+#include "launchconfig.h"
 
 class Calc {
 	std::mutex mutex;

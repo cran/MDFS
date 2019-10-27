@@ -1,7 +1,7 @@
 #ifndef LAUNCHCONFIG_CUH
 #define LAUNCHCONFIG_CUH
 
-#include "datafile.cuh"
+#include "datafile.h"
 
 enum ReduceMethod { RM_AVG, RM_MAX };
 

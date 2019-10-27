@@ -2,9 +2,9 @@
 #define DISCRETIZER_CUH
 
 #include <stdint.h>
-#include "scheduler.cuh"
-#include "launchable.cuh"
-#include "launchconfig.cuh"
+#include "scheduler.h"
+#include "launchable.h"
+#include "launchconfig.h"
 
 class Discretizer : public Launchable {
 	LaunchConfig lc;

@@ -5,22 +5,22 @@
 /* MDFS Info */
 
 MDFSInfo::MDFSInfo(
-    int dimensions,
-    int divisions,
-    int discretizations,
+    size_t dimensions,
+    size_t divisions,
+    size_t discretizations,
     float pseudo,
     float ig_thr,
     int* interesting_vars,
     size_t interesting_vars_count,
     bool require_all_vars
 ) : dimensions(dimensions), divisions(divisions), discretizations(discretizations),
-    pseudo(pseudo), ig_thr(ig_thr), interesting_vars(interesting_vars), 
+    pseudo(pseudo), ig_thr(ig_thr), interesting_vars(interesting_vars),
     interesting_vars_count(interesting_vars_count), require_all_vars(require_all_vars) {}
 
 
 /* Tuple Generator */
 
-TupleGenerator::TupleGenerator(int dimensions, int variable_count) 
+TupleGenerator::TupleGenerator(size_t dimensions, size_t variable_count)
     : nextTuple(new Tuple(dimensions)), variable_count(variable_count) {}
 
 bool TupleGenerator::hasNext() const {
@@ -37,17 +37,17 @@ std::unique_ptr<Tuple> TupleGenerator::next() {
 
 /* Tuple */
 
-Tuple::Tuple(int dimensions) : combination(dimensions + 1) {
+Tuple::Tuple(size_t dimensions) : combination(dimensions + 1) {
     // Npte: this value becomes a "sentiel"
     this->combination[0] = 0;
 
-    for (int d = 1; d <= dimensions; ++d) {
+    for (size_t d = 1; d <= dimensions; ++d) {
         this->combination[d] = d - 1;
     }
 }
 
 // Note: Would move it to the generator, so that it will initialize values and store state.
-Tuple::Tuple(const Tuple& previous, int variable_count) : combination(previous.combination) {
+Tuple::Tuple(const Tuple& previous, size_t variable_count) : combination(previous.combination) {
     const int dimensions = this->dimensions();
     int d = dimensions;
 
@@ -63,29 +63,13 @@ Tuple::Tuple(const Tuple& previous, int variable_count) : combination(previous.c
     }
 }
 
-int Tuple::dimensions() const {
-    return this->combination.size() - 1;
-}
-
-int Tuple::get(int index) const {
-    return this->combination[index + 1];
-}
-
-std::vector<int>::const_iterator Tuple::begin() const {
-    return this->combination.begin() + 1;
-}
-
-std::vector<int>::const_iterator Tuple::end() const {
-    return this->combination.end();
-}
-
 
 /* MDFSTuple */
 
-MDFSTuple::MDFSTuple(int i, float ig, std::vector<int>&& v)
+MDFSTuple::MDFSTuple(size_t i, float ig, std::vector<int>&& v)
     : i(i), ig(ig), v(v) {}
 
-int MDFSTuple::getVariable() const {
+size_t MDFSTuple::getVariable() const {
     return this->i;
 }
 
@@ -93,7 +77,7 @@ float MDFSTuple::getIG() const {
     return this->ig;
 }
 
-int MDFSTuple::get(int i) const {
+size_t MDFSTuple::get(size_t i) const {
     return this->v[i];
 }
 
@@ -104,7 +88,7 @@ size_t MDFSTuple::getDim() const {
 
 /* MDFSOutput */
 
-MDFSOutput::MDFSOutput(MDFSOutputType type, int variable_count)
+MDFSOutput::MDFSOutput(MDFSOutputType type, size_t variable_count)
     : max_igs_tuples(nullptr), type(type) {
     switch(type) {
         case MDFSOutputType::MaxIGs:
@@ -129,26 +113,28 @@ MDFSOutput::~MDFSOutput() {
    }
 }
 
-void MDFSOutput::setMaxIGsTuples(int *tuples) {
+void MDFSOutput::setMaxIGsTuples(int *tuples, int *dids) {
     this->max_igs_tuples = tuples;
+    this->dids = dids;
 }
 
-void MDFSOutput::updateMaxIG(const Tuple& tuple, float *digs) {
+void MDFSOutput::updateMaxIG(const Tuple& tuple, float *digs, int *dids) {
     if (this->max_igs_tuples == nullptr) {
-        for (int i = 0; i < tuple.dimensions(); ++i) {
-            int v = tuple.get(i);
+        for (size_t i = 0; i < tuple.dimensions(); ++i) {
+            size_t v = tuple.get(i);
 
             if (digs[i] > (*(this->max_igs))[v]) {
                 (*(this->max_igs))[v] = digs[i];
             }
         }
     } else {
-        for (int i = 0; i < tuple.dimensions(); ++i) {
-            int v = tuple.get(i);
+        for (size_t i = 0; i < tuple.dimensions(); ++i) {
+            size_t v = tuple.get(i);
 
             if (digs[i] > (*(this->max_igs))[v]) {
                 (*(this->max_igs))[v] = digs[i];
                 std::copy(tuple.begin(), tuple.end(), this->max_igs_tuples + tuple.dimensions() * v);
+                this->dids[v] = dids[i];
             }
         }
     }
@@ -158,7 +144,7 @@ void MDFSOutput::copyMaxIGsAsDouble(double *copy) const {
     std::copy(this->max_igs->begin(), this->max_igs->end(), copy);
 }
 
-void MDFSOutput::addTuple(int i, float ig, const Tuple& vt) {
+void MDFSOutput::addTuple(size_t i, float ig, const Tuple& vt) {
     this->tuples->emplace_back(i, ig, std::vector<int>(vt.begin(), vt.end()));
 }
 

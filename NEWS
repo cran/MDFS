@@ -1,3 +1,19 @@
+1.0.4 | TODO
+
+* add function to discretize interesting variables for inspection
+
+* "return.tuples" parameter now also controls returning of relevant
+  discretization numbers
+
+* change optional parameter "pseudo.count" name to "pc.xi" to better reflect
+  its effect
+
+* fix "interesting.vars" parameter to not require being sorted
+
+* add "require.all.vars" parameter
+
+* optimize IG computation on CPU (up to 4x speedup)
+
 1.0.3 | 2018-11-07
 
 * add note about recommended FDR control method
