@@ -1,4 +1,8 @@
-1.0.4 | TODO
+1.0.5 | 2019-11-10
+
+* fix CUDA failure (issue in linking)
+
+1.0.4 | 2019-10-27
 
 * add function to discretize interesting variables for inspection
 

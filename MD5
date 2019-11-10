@@ -1,6 +1,6 @@
-5fa8a6ebc711dbc32adb8e0968f000cb *DESCRIPTION
+17a3eae779db67f75114981c8bde2cec *DESCRIPTION
 ac732fb9211c17f10dce82ec6aa91b85 *NAMESPACE
-fb92a0f5ae63182556d42f53fd810740 *NEWS
+1fb2b0cfd200b7bffa7d2ea79d8e6c94 *NEWS
 2c10bcf5139345dc16e0eaf4153ce26c *R/data.R
 b8bab02840bc32f28f3a9285cffef4c3 *R/information_gain.R
 2a576ad408ee664f1facbfa1596f0134 *R/main.R
@@ -22,7 +22,7 @@ ea828b2f8bc61e37570fc987a92d4ba5 *man/RelevantVariables.Rd
 9d2898fa3f3194aa6afdf58f34e07e3a *man/madelon.Rd
 2450426bf8b73a183a6a1c5179f61b02 *man/plot.MDFS.Rd
 227f40ec23cbb8477f64642266aaacf4 *src/MDFS-win.def
-edafb63741e3ff4560eeea601090e195 *src/Makevars.cuda.in
+8815f99170385b8e759ac3ee7ef60bab *src/Makevars.cuda.in
 21740b9f3a500c30884733a920c7aca5 *src/Makevars.in
 21740b9f3a500c30884733a920c7aca5 *src/Makevars.win
 2a71e7b55b8100dc64635e65edcfa4b9 *src/cpu/common.cpp
