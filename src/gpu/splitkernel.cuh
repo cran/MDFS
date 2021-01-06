@@ -27,6 +27,7 @@ void splitKernelWrapper(KernelParam param, cudaStream_t stream) {
 	int grid = pow(TILE_SIZE / blockSize(DIM), DIM);
 	int block = pow(blockSize(DIM), DIM);
 
+	// PREFETCH = 4 is a compute/memcopy tradeoff (as well as limited by shared memory)
 	if (SHORT) {
 		splitKernel<uint16_t, TILE_SIZE, DIM, DIV, BITS, blockSize(DIM), 4, AVG>
 			<<<grid, block, 0, stream>>>(param);
@@ -42,7 +43,7 @@ template<typename CType,
 	int DIM,
 	int DIV,
 	int BITS,
-        int BLOCK,
+        int BLOCK, // block edge length
         int PREFETCH,
         int AVG>
 __global__
@@ -50,6 +51,7 @@ __global__
 __launch_bounds__(DIM == 2 ? BLOCK*BLOCK : DIM == 3 ? BLOCK*BLOCK*BLOCK :
 DIM == 4 ? BLOCK*BLOCK*BLOCK*BLOCK : BLOCK*BLOCK*BLOCK*BLOCK*BLOCK) // Workaround
 void splitKernel(KernelParam param) {
+	// size+1 to avoid shared memory bank conflicts
 	__shared__ uint64_t prefetch[DIM][BLOCK][PREFETCH * BITS + 1];
 
 	// Variable length in 64bit packs
@@ -123,7 +125,7 @@ void splitKernel(KernelParam param) {
 				for (int j = 0; j < PREFETCH; j++) { // read PREFETCH, porcess PREFETCH 64bit packs
 					uint64_t bitVec[DIM][DIV]; // bit vectors fo DIV classes (Without 0)
 
-					// Decode:
+					// Decode (decompress):
 					#pragma unroll
 					for (int k = 0; k < DIM; k++) {
 						#pragma unroll

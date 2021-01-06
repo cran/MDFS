@@ -1,10 +1,9 @@
 #include "r_interface.h"
 
-#include "cpu/dataset.h"
 #include "cpu/mdfs.h"
 
 #ifdef WITH_CUDA
-// required to report errors - currently only CUDA reports any errors
+// <R.h> required to report errors - currently only CUDA reports any errors
 #include <R.h>
 #include "gpu/cucubes.h"
 #endif
@@ -22,6 +21,7 @@ SEXP r_compute_max_ig(
         SEXP Rin_interesting_vars,
         SEXP Rin_require_all_vars,
         SEXP Rin_return_tuples,
+        SEXP Rin_return_min,
         SEXP Rin_use_cuda)
 {
     #ifndef WITH_CUDA
@@ -76,16 +76,11 @@ SEXP r_compute_max_ig(
 
     RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
 
-    DataSet dataset;
-
-    dataset.loadData(
-        &rawdata,
-        DiscretizationInfo(
-            asInteger(Rin_seed),
-            discretizations,
-            divisions,
-            asReal(Rin_range)
-        )
+    DiscretizationInfo dfi(
+        asInteger(Rin_seed),
+        discretizations,
+        divisions,
+        asReal(Rin_range)
     );
 
     MDFSInfo mdfs_info(
@@ -96,7 +91,8 @@ SEXP r_compute_max_ig(
         0.0f,
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
-        asLogical(Rin_require_all_vars)
+        asLogical(Rin_require_all_vars),
+        nullptr
     );
 
     SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
@@ -104,14 +100,15 @@ SEXP r_compute_max_ig(
     SEXP Rout_dids = nullptr;
 
     const bool return_tuples = asLogical(Rin_return_tuples);
-    MDFSOutput mdfs_output(MDFSOutputType::MaxIGs, variable_count);
+    MDFSOutputType out_type = asLogical(Rin_return_min) ? MDFSOutputType::MinIGs : MDFSOutputType::MaxIGs;
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
     if (return_tuples) {
         Rout_tuples = PROTECT(allocMatrix(INTSXP, mdfs_info.dimensions, variable_count));
         Rout_dids = PROTECT(allocVector(INTSXP, variable_count));
         mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples), INTEGER(Rout_dids)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
     }
 
-    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &dataset, mdfs_output);
+    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, dfi, mdfs_output);
 
     mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
 
@@ -147,7 +144,8 @@ SEXP r_compute_all_matching_tuples(
         SEXP Rin_pseudocount,
         SEXP Rin_interesting_vars,
         SEXP Rin_require_all_vars,
-        SEXP Rin_ig_thr)
+        SEXP Rin_ig_thr,
+        SEXP Rin_I_lower)
 {
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
 
@@ -159,16 +157,11 @@ SEXP r_compute_all_matching_tuples(
 
     RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
 
-    DataSet dataset;
-
-    dataset.loadData(
-        &rawdata,
-        DiscretizationInfo(
-            asInteger(Rin_seed),
-            discretizations,
-            divisions,
-            asReal(Rin_range)
-        )
+    DiscretizationInfo dfi(
+        asInteger(Rin_seed),
+        discretizations,
+        divisions,
+        asReal(Rin_range)
     );
 
     MDFSInfo mdfs_info(
@@ -179,12 +172,13 @@ SEXP r_compute_all_matching_tuples(
         asReal(Rin_ig_thr),
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
-        asLogical(Rin_require_all_vars)
+        asLogical(Rin_require_all_vars),
+        REAL(Rin_I_lower)
     );
 
-    MDFSOutput mdfs_output(MDFSOutputType::MatchingTuples, variable_count);
+    MDFSOutput mdfs_output(MDFSOutputType::MatchingTuples, mdfs_info.dimensions, variable_count);
 
-    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &dataset, mdfs_output);
+    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, dfi, mdfs_output);
 
     const int result_members_count = 3;
     const int tuples_count = mdfs_output.getMatchingTuplesCount();
@@ -204,10 +198,6 @@ SEXP r_compute_all_matching_tuples(
 
     return Rout_result;
 }
-
-#include "cpu/discretize.h"
-#include <vector>
-#include <algorithm>
 
 extern "C"
 SEXP r_discretize(

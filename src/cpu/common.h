@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <list>
 #include <vector>
-#include <memory>
+#include <map>
+#include <tuple>
 
-#include "dataset.h"
 
 class MDFSInfo {
 public:
@@ -18,6 +18,7 @@ public:
     int* interesting_vars;  // has to be sorted
     size_t interesting_vars_count;
     bool require_all_vars;
+    double* I_lower;
 
     MDFSInfo(
         size_t dimensions,
@@ -27,83 +28,50 @@ public:
         float ig_thr,
         int* interesting_vars,
         size_t interesting_vars_count,
-        bool require_all_vars
+        bool require_all_vars,
+        double* I_lower
     );
 };
 
-class TupleGenerator;
-
-class Tuple {
-    std::vector<size_t> combination;
-
-    // Initializes first tuple: (0, ..., 0)
-    Tuple(size_t dimensions);
-
-    // Initializes consequent tuple to previous: (0, ..., x+1, ...)
-    Tuple(const Tuple& previous, size_t variable_count);
-
-public:
-    inline size_t dimensions() const {
-        return this->combination.size() - 1;
-    }
-    inline size_t get(size_t index) const {
-        return this->combination[index + 1];
-    }
-    inline std::vector<size_t>::const_iterator begin() const {
-        return this->combination.begin() + 1;
-    }
-    inline std::vector<size_t>::const_iterator end() const {
-        return this->combination.end();
-    }
-
-    friend TupleGenerator;
-};
 
 class TupleGenerator {
-    std::unique_ptr<Tuple> nextTuple;
-    const size_t variable_count;
+    size_t* nextTuple;
+    const size_t n_dimensions;
+    const size_t n_variables;
+    const std::vector<size_t> interesting_vars;
 
 public:
-    TupleGenerator(size_t dimensions, size_t variable_count);
+    TupleGenerator(size_t n_dimensions, size_t n_variables);
+    TupleGenerator(size_t n_dimensions, const std::vector<size_t>& interesting_vars);
+    ~TupleGenerator();
 
     bool hasNext() const;
-    std::unique_ptr<Tuple> next();
+    void next(size_t* out);
 };
 
-class MDFSTuple {
-    size_t i;
-    float ig;
-    std::vector<int> v;
 
-public:
-    MDFSTuple(size_t i, float ig, std::vector<int>&& v);
-
-    size_t getVariable() const;
-    float getIG() const;
-    size_t get(size_t i) const;
-    size_t getDim() const;
-};
-
-enum class MDFSOutputType { MaxIGs, MatchingTuples };
+enum class MDFSOutputType { MaxIGs, MinIGs, MatchingTuples };
 
 class MDFSOutput {
+public:
     int *max_igs_tuples;
     int *dids;
     union {
         std::vector<float> *max_igs;
-        std::list<MDFSTuple> *tuples;
+        std::map<std::tuple<std::vector<size_t>, size_t>, std::tuple<float, size_t>> *tuples;
     };
 
-public:
-    MDFSOutput(MDFSOutputType type, size_t variable_count);
+    MDFSOutput(MDFSOutputType type, size_t n_dimensions, size_t variable_count);
     ~MDFSOutput();
 
     const MDFSOutputType type;
+    const size_t n_dimensions;
 
     void setMaxIGsTuples(int *tuples, int *dids);
-    void updateMaxIG(const Tuple& tuple, float *digs, int *dids);
+    void updateMaxIG(const size_t* tuple, float *igs, size_t discretization_id);
+    void updateMinIG(const size_t* tuple, float *igs, size_t discretization_id);
     void copyMaxIGsAsDouble(double *copy) const;
-    void addTuple(size_t i, float ig, const Tuple& vt);
+    void addTuple(size_t i, float ig, size_t discretization_id, const size_t* vt);
     size_t getMatchingTuplesCount() const;
     void copyMatchingTuples(int* matching_tuples_vars, double* IGs, int* matching_tuples) const;
 };

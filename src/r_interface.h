@@ -13,6 +13,7 @@ SEXP r_compute_max_ig(
 	SEXP Rin_interesting_vars,
 	SEXP Rin_require_all_vars,
 	SEXP Rin_return_tuples,
+	SEXP Rin_return_min,
 	SEXP Rin_use_cuda
 );
 
@@ -28,7 +29,8 @@ extern "C"
 	SEXP Rin_pseudocount,
 	SEXP Rin_interesting_vars,
 	SEXP Rin_require_all_vars,
-	SEXP Rin_ig_thr
+	SEXP Rin_ig_thr,
+	SEXP Rin_I_lower
 );
 
 extern "C"

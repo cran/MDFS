@@ -4,17 +4,27 @@
 \alias{ComputeInterestingTuples}
 \title{Interesting tuples}
 \usage{
-ComputeInterestingTuples(data, decision, dimensions = 2,
-  divisions = NULL, discretizations = 1, seed = NULL, range = NULL,
-  pc.xi = 0.25, ig.thr, interesting.vars = vector(mode = "integer"),
-  require.all.vars = FALSE)
+ComputeInterestingTuples(
+  data,
+  decision,
+  dimensions = 2,
+  divisions = NULL,
+  discretizations = 1,
+  seed = NULL,
+  range = NULL,
+  pc.xi = 0.25,
+  ig.thr,
+  I.lower,
+  interesting.vars = vector(mode = "integer"),
+  require.all.vars = FALSE
+)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
 
 \item{decision}{decision variable as a binary sequence of length equal to number of observations}
 
-\item{dimensions}{number of dimensions (a positive integer; 5 max)}
+\item{dimensions}{number of dimensions (a positive integer; 5 max) - FIXME: only 2D supported for now!}
 
 \item{divisions}{number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)}
 
@@ -27,6 +37,8 @@ ComputeInterestingTuples(data, decision, dimensions = 2,
 \item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
 \item{ig.thr}{IG threshold above which the tuple is interesting}
+
+\item{I.lower}{IG values computed for lower dimension (1D for 2D, etc.)}
 
 \item{interesting.vars}{variables for which to check the IGs (none = all)}
 
@@ -49,7 +61,9 @@ Interesting tuples
 }
 \examples{
 \donttest{
+ig.1d <- ComputeMaxInfoGains(madelon$data, madelon$decision, dimensions = 1, divisions = 1,
+                             range = 0, seed = 0)
 ComputeInterestingTuples(madelon$data, madelon$decision, dimensions = 2, divisions = 1,
-                         range = 0, seed = 0, ig.thr = 100)
+                         range = 0, seed = 0, ig.thr = 100, I.lower = ig.1d$IG)
 }
 }

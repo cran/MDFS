@@ -88,9 +88,23 @@ void Discretizer::count(int d, int var) {
 	}
 }
 
+// nbits - bits per object (to encode its variable [feature] value)
+// psize = 64/nbits (shift-only: how many fit in one uint64)
+
+// shiftCopy - compress and copy data for shift (regular) kernels
+//
+// Compression fits `psize` objects in one uint64.
+// A single object is in exactly one uint64, taking `nbits` space,
+// shifted left from previous object.
+// In case of `nbits=3`, one bit is lost (unused).
+//
+// d - discretization ID
+// var - variable (feature) ID
 void Discretizer::shiftCopy(int d, int var) {
 	uint64_t* data0 = df.data + (d * df.fi.disclen + var * (df.fi.varlen0 + df.fi.varlen1));
+	// num of objects copied already (per decision)
 	int last[2] = {0, 0};
+	// target mem addresses of packs (per decision)
 	uint64_t* data[2] = {data0, data0 + df.fi.varlen0};
 
 	for (int i = 0; i < inf.objs; i++) {
@@ -103,9 +117,18 @@ void Discretizer::shiftCopy(int d, int var) {
 	}
 }
 
+// splitCopy - compress and copy data for split&tables (bitvec) kernels
+//
+// Compression fits one bit for 64 objects in one uint64.
+// A single object is split over `nbits` consecutive uint64s.
+//
+// d - discretization ID
+// var - variable (feature) ID
 void Discretizer::splitCopy(int d, int var) {
 	uint64_t* data0 = df.data + (d * df.fi.disclen + var * (df.fi.varlen0 + df.fi.varlen1));
+	// num of objects copied already (per decision)
 	int last[2] = {0, 0};
+	// target mem addresses of packs (per decision)
 	uint64_t* data[2] = {data0, data0 + df.fi.varlen0};
 
 	for (int i = 0; i < inf.objs; i++) {

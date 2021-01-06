@@ -1,8 +1,7 @@
 NVCC = nvcc
 PKG_NVCCFLAGS = -std=c++11 -O3 -arch=compute_30 -Xcompiler='$(CXX11PICFLAGS) $(C_VISIBILITY)'
 
-OBJS_CPU = cpu/discretize.o cpu/dataset.o \
-	cpu/common.o
+OBJS_CPU = cpu/discretize.o cpu/common.o
 # TODO: research why "kernel_param" must be before "kernels" to not lose the 'kernels' vector
 # see also commit 247862fabb6fe421c8cc4d1f89ed28638b0c64eb
 OBJS_GPU = gpu/discretize.o gpu/allocator.o gpu/kernel_param.o gpu/kernels.o gpu/calc.o \

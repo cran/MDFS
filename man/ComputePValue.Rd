@@ -4,11 +4,23 @@
 \alias{ComputePValue}
 \title{Compute p-values from information gains and return MDFS}
 \usage{
-ComputePValue(IG, dimensions, divisions, response.divisions = 1,
-  df = NULL, contrast.mask = NULL, ig.in.bits = TRUE,
-  ig.doubled = FALSE, one.dim.mode = "exp", irr.vars.num = NULL,
-  ign.low.ig.vars.num = NULL, min.irr.vars.num = NULL,
-  max.ign.low.ig.vars.num = NULL, search.points = 8, level = 0.05)
+ComputePValue(
+  IG,
+  dimensions,
+  divisions,
+  response.divisions = 1,
+  df = NULL,
+  contrast.mask = NULL,
+  ig.in.bits = TRUE,
+  ig.doubled = FALSE,
+  one.dim.mode = "exp",
+  irr.vars.num = NULL,
+  ign.low.ig.vars.num = NULL,
+  min.irr.vars.num = NULL,
+  max.ign.low.ig.vars.num = NULL,
+  search.points = 8,
+  level = 0.05
+)
 }
 \arguments{
 \item{IG}{max conditional information gains}

@@ -1,172 +1,257 @@
 #ifndef MDFS
 #define MDFS
 
-#include "dataset.h"
+#include "mdfs_cpu_kernel_incremental.h"
+#include "mdfs_cpu_kernel.h"
+
 #include "common.h"
+#include "dataset.h"
+#include "discretize.h"
 
 #include <algorithm>
-#include <cstring>
 
-#include "mdfs.h"
-#include "stats.h"
-
-#define CONTAINS(x, y) (std::find((x).begin(), (x).end(), (y)) != (x).end())
 
 template <uint8_t n_dimensions>
 void scalarMDFS(
     const MDFSInfo& mdfs_info,
-    DataSet* dataset,
+    RawData* raw_data,
+    const DiscretizationInfo& dfi,
     MDFSOutput& out
 ) {
+    size_t c[2] = {0, 0};
+    uint8_t* decision = new uint8_t[raw_data->info.object_count];
+    for (size_t i = 0; i < raw_data->info.object_count; i++) {
+        decision[i] = raw_data->decision[i];
+        c[decision[i]]++;
+    }
+    const float cmin = std::min(c[0], c[1]);
+
+    float* I_lower = nullptr;
+    if (mdfs_info.I_lower != nullptr) {
+        I_lower = new float[raw_data->info.variable_count];
+        for (size_t i = 0; i < raw_data->info.variable_count; i++) {
+            I_lower[i] = mdfs_info.I_lower[i];
+        }
+    }
+
+    const float p0 = c[0] / cmin * mdfs_info.pseudo;
+    const float p1 = c[1] / cmin * mdfs_info.pseudo;
+
     const size_t n_classes = mdfs_info.divisions + 1;
     const size_t num_of_cubes = std::pow(n_classes, n_dimensions);
     const size_t num_of_cubes_reduced = std::pow(n_classes, n_dimensions - 1);
 
-    const auto c0 = dataset->info->object_count_per_class[0];
-    const auto c1 = dataset->info->object_count_per_class[1];
-    const float cmin = std::min(c0, c1);
-
-    const auto d1 = n_classes;
-    const auto d2 = d1*n_classes;
+    const auto d2 = n_classes*n_classes;
     const auto d3 = d2*n_classes;
     const auto d4 = d3*n_classes;
+    const size_t d[3] = {d2, d3, d4};
 
-    const float p0 = c0 / cmin * mdfs_info.pseudo;
-    const float p1 = c1 / cmin * mdfs_info.pseudo;
+    const float H_Y_counters[2] = {
+        c[0] + p0 * num_of_cubes,
+        c[1] + p1 * num_of_cubes,
+    };
+    const float H_Y = entropy(1, H_Y_counters, H_Y_counters+1);
 
-    TupleGenerator generator(n_dimensions, dataset->info->variable_count);
+    const size_t n_vars_to_discretize = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
+                                        mdfs_info.interesting_vars_count :
+                                        raw_data->info.variable_count;
 
-    #ifdef _OPENMP
-    #pragma omp parallel
-    #endif
-    {
-        float* ig = new float[n_dimensions * mdfs_info.discretizations];
-        float* dig = new float[n_dimensions];
-        int* did = new int[n_dimensions];
-        float* counters = new float[2 * num_of_cubes];
-        float* reduced = new float[2 * num_of_cubes_reduced];
+    if (out.type == MDFSOutputType::MinIGs) {
+        // we will be doing overall max on discretizations
+        std::fill(out.max_igs->begin(), out.max_igs->end(), -std::numeric_limits<float>::infinity());
+    }
 
-        std::unique_ptr<Tuple> variable_set;
+    for (size_t discretization_id = 0; discretization_id < mdfs_info.discretizations; discretization_id++) {
+        TupleGenerator* generator;
+        if (mdfs_info.interesting_vars_count && mdfs_info.require_all_vars) {
+            generator = new TupleGenerator(n_dimensions, std::vector<size_t>(mdfs_info.interesting_vars,
+                                                                             mdfs_info.interesting_vars + mdfs_info.interesting_vars_count));
+        } else {
+            generator = new TupleGenerator(n_dimensions, raw_data->info.variable_count);
+        }
 
-        bool hasWorkToDo = true;
+        uint8_t* data = new uint8_t[raw_data->info.object_count * raw_data->info.variable_count];
 
-        do {
-            #ifdef _OPENMP
-            #pragma omp critical (GetTheNextTuple)
-            #endif
+        for (size_t i = 0; i < n_vars_to_discretize; ++i) {
+            const size_t v = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
+                             mdfs_info.interesting_vars[i] :
+                             i;
+            const double* in_data = raw_data->getVariable(v);
 
-            if (!generator.hasNext()) { // we have to synchronize because TupleGenerator is not omp-thread-safe and it has to be shared
-                hasWorkToDo = false;
-                // one does not simply leave the OpenMP's critical section
-                // no, seriously, it is programmed such that you cannot use break/continue here
-                // hence we break later ¯\_(ツ)_/¯
-            } else {
-                variable_set = generator.next();
+            std::vector<double> sorted_in_data(in_data, in_data + raw_data->info.object_count);
+            std::sort(sorted_in_data.begin(), sorted_in_data.end());
+
+            discretize(
+                dfi.seed,
+                discretization_id,
+                v,
+                dfi.divisions,
+                raw_data->info.object_count,
+                in_data,
+                sorted_in_data,
+                data + v * raw_data->info.object_count,
+                dfi.range
+            );
+        }
+
+        MDFSOutput* local_mdfs_output = nullptr;
+        if (out.type == MDFSOutputType::MinIGs) {
+            local_mdfs_output = new MDFSOutput(MDFSOutputType::MinIGs, n_dimensions, raw_data->info.variable_count);
+            if (out.max_igs_tuples != nullptr) {
+                local_mdfs_output->setMaxIGsTuples(new int[n_dimensions*raw_data->info.variable_count], new int[raw_data->info.variable_count]);
             }
+        }
 
-            if (!hasWorkToDo) {
-                break; // this is right where we break, OpenMP :-)
-            }
+        #ifdef _OPENMP
+        #pragma omp parallel
+        #endif
+        {
+            size_t* tuple = new size_t[n_dimensions];
+            float* igs = new float[n_dimensions];
+            float* counters = new float[2 * num_of_cubes];
+            float* reduced = new float[2 * num_of_cubes_reduced];
 
-            std::list<int> current_interesting_vars;
-            std::set_intersection(
-                variable_set->begin(), variable_set->end(),
-                mdfs_info.interesting_vars, mdfs_info.interesting_vars + mdfs_info.interesting_vars_count,
-                std::back_inserter(current_interesting_vars));
+            bool hasWorkToDo = true;
 
-            if (mdfs_info.interesting_vars_count) {
-                if (mdfs_info.require_all_vars) {
-                    if (mdfs_info.dimensions != current_interesting_vars.size()) {
-                        continue;
-                    }
+            do {
+                #ifdef _OPENMP
+                #pragma omp critical (GetTheNextTuple)
+                #endif
+                if (!generator->hasNext()) { // we have to synchronize because TupleGenerator is not omp-thread-safe and it has to be shared
+                    hasWorkToDo = false;
+                    // one does not simply leave the OpenMP's critical section
+                    // no, seriously, it is programmed such that you cannot use break/continue here
+                    // hence we break later ¯\_(ツ)_/¯
                 } else {
+                    generator->next(tuple);
+                }
+
+                if (!hasWorkToDo) {
+                    break; // this is right where we break, OpenMP :-)
+                }
+
+                if (mdfs_info.interesting_vars_count && !mdfs_info.require_all_vars) {
+                    std::list<int> current_interesting_vars;
+                    std::set_intersection(
+                        tuple, tuple+n_dimensions,
+                        mdfs_info.interesting_vars, mdfs_info.interesting_vars + mdfs_info.interesting_vars_count,
+                        std::back_inserter(current_interesting_vars));
+
                     if (current_interesting_vars.empty()) {
                         continue;
                     }
                 }
-            }
 
-            // d - iterates over discretizations (repeating the run)
-            for (size_t d = 0; d < dataset->info->discretizations; d++) {
-                std::memset(counters, 0, sizeof(float) * num_of_cubes * 2);
-
-                // o - iterates over objects (from dataset)
-                for (size_t o = 0; o < dataset->info->object_count; ++o) {
-                    size_t bucket = dataset->getDiscretizationData(variable_set->get(0), d)[o];
-                    if (n_dimensions >= 2) {
-                        bucket += d1 * dataset->getDiscretizationData(variable_set->get(1), d)[o];
+                if (n_dimensions >= 2) {
+                    if (I_lower == nullptr) {
+                        process_tuple<n_dimensions>(
+                            data,
+                            decision,
+                            raw_data->info.object_count,
+                            n_classes,
+                            tuple,
+                            counters, reduced,
+                            num_of_cubes, num_of_cubes_reduced,
+                            p0, p1,
+                            d,
+                            igs,
+                            nullptr);
+                    } else {
+                        // FIXME: so far only 2D supported
+                        process_tuple_incremental<n_dimensions>(
+                            data,
+                            decision,
+                            raw_data->info.object_count,
+                            n_classes,
+                            tuple,
+                            counters,
+                            num_of_cubes,
+                            p0, p1,
+                            d,
+                            H_Y,
+                            I_lower,
+                            igs,
+                            nullptr);
                     }
-                    if (n_dimensions >= 3) {
-                        bucket += d2 * dataset->getDiscretizationData(variable_set->get(2), d)[o];
-                    }
-                    if (n_dimensions >= 4) {
-                        bucket += d3 * dataset->getDiscretizationData(variable_set->get(3), d)[o];
-                    }
-                    if (n_dimensions >= 5) {
-                        bucket += d4 * dataset->getDiscretizationData(variable_set->get(4), d)[o];
-                    }
-
-                    size_t dec = dataset->decision[o];
-                    counters[dec * num_of_cubes + bucket] += 1.0f;
+                } else {  // 1D
+                    process_tuple_incremental<n_dimensions>(
+                        data,
+                        decision,
+                        raw_data->info.object_count,
+                        n_classes,
+                        tuple,
+                        counters,
+                        num_of_cubes,
+                        p0, p1,
+                        d,
+                        H_Y,
+                        nullptr,
+                        igs,
+                        nullptr);
                 }
 
-                // c - iterates over counters (for each cube)
-                for (size_t c = 0; c < num_of_cubes; ++c) {
-                    counters[0 * num_of_cubes + c] += p0;
-                    counters[1 * num_of_cubes + c] += p1;
-                }
+                #ifdef _OPENMP
+                #pragma omp critical (SetOutput)
+                #endif
+                switch (out.type) { // we have to synchronize because MDFSOutput is not omp-thread-safe and it has to be shared
+                    case MDFSOutputType::MaxIGs:
+                        out.updateMaxIG(tuple, igs, discretization_id);
+                        break;
 
-                const float ign = informationGain(num_of_cubes, counters, counters + num_of_cubes);
+                    case MDFSOutputType::MinIGs:
+                        local_mdfs_output->updateMinIG(tuple, igs, discretization_id);
+                        break;
 
-                // v - iterates over variables (from variable_set)
-                for (size_t v = 0, stride = 1; v < n_dimensions; ++v, stride *= n_classes) {
-                    std::memset(reduced, 0, sizeof(float) * num_of_cubes_reduced * 2);
-                    reduceCounter(n_classes, num_of_cubes, counters, reduced, stride);
-                    reduceCounter(n_classes, num_of_cubes, counters + num_of_cubes, reduced + num_of_cubes_reduced, stride);
-                    float igg = informationGain(num_of_cubes_reduced, reduced, reduced + num_of_cubes_reduced);
-                    ig[v * mdfs_info.discretizations + d] = ign - igg;
-                }
-            }
-
-            // reduce for each variable to max across discretizations
-            for (size_t v = 0; v < n_dimensions; ++v) {
-                auto begin = ig + v * mdfs_info.discretizations;
-                auto maxIt = std::max_element(begin, begin + mdfs_info.discretizations);
-                dig[v] = *maxIt;
-                did[v] = std::distance(begin, maxIt);
-            }
-
-            #ifdef _OPENMP
-            #pragma omp critical (SetOutput)
-            #endif
-            switch (out.type) { // we have to synchronize because MDFSOutput is not omp-thread-safe and it has to be shared
-                case MDFSOutputType::MaxIGs:
-                    out.updateMaxIG(*variable_set, dig, did);
-                    break;
-
-                case MDFSOutputType::MatchingTuples:
-
-                    // v - iterates over variables (from variable set)
-                    for (size_t v = 0; v < n_dimensions; ++v) {
-                        if (dig[v] > mdfs_info.ig_thr && (current_interesting_vars.empty() || CONTAINS(current_interesting_vars, variable_set->get(v)))) {
-                            out.addTuple(variable_set->get(v), dig[v], *variable_set);
+                    case MDFSOutputType::MatchingTuples:
+                        for (size_t v = 0; v < n_dimensions; ++v) {
+                            if (igs[v] > mdfs_info.ig_thr) {
+                                out.addTuple(tuple[v], igs[v], discretization_id, tuple);
+                            }
                         }
-                    }
-                    break;
-            }
-        } while (true);
+                        break;
+                }
+            } while (true);
 
-        delete[] reduced;
-        delete[] counters;
-        delete[] did;
-        delete[] dig;
-        delete[] ig;
+            delete[] reduced;
+            delete[] counters;
+            delete[] igs;
+            delete[] tuple;
+        }
+
+        if (local_mdfs_output != nullptr) {
+            // need max over discretizations so copy to out whichever max
+            for (size_t i = 0; i < raw_data->info.variable_count; i++) {
+                if ((*local_mdfs_output->max_igs)[i] > (*out.max_igs)[i]) {
+                    (*out.max_igs)[i] = (*local_mdfs_output->max_igs)[i];
+                    if (out.max_igs_tuples != nullptr) {
+                        std::copy(local_mdfs_output->max_igs_tuples + n_dimensions * i,
+                                  local_mdfs_output->max_igs_tuples + n_dimensions * (i+1),
+                                  out.max_igs_tuples + n_dimensions * i);
+                        out.dids[i] = local_mdfs_output->dids[i];
+                    }
+                }
+            }
+            if (out.max_igs_tuples != nullptr) {
+                delete[] local_mdfs_output->max_igs_tuples;
+                delete[] local_mdfs_output->dids;
+            }
+            delete local_mdfs_output;
+        }
+
+        delete[] data;
+        delete generator;
     }
+
+    if (I_lower != nullptr) {
+        delete[] I_lower;
+    }
+    delete[] decision;
 }
 
 typedef void (*MdfsImpl) (
     const MDFSInfo& mdfs_info,
-    DataSet* dataset,
+    RawData* raw_data,
+    const DiscretizationInfo& dfi,
     MDFSOutput& out
 );
 

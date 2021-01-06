@@ -4,10 +4,21 @@
 \alias{ComputeMaxInfoGains}
 \title{Max information gains}
 \usage{
-ComputeMaxInfoGains(data, decision, dimensions = 1, divisions = NULL,
-  discretizations = 1, seed = NULL, range = NULL, pc.xi = 0.25,
-  return.tuples = FALSE, interesting.vars = vector(mode = "integer"),
-  require.all.vars = FALSE, use.CUDA = FALSE)
+ComputeMaxInfoGains(
+  data,
+  decision,
+  dimensions = 1,
+  divisions = NULL,
+  discretizations = 1,
+  seed = NULL,
+  range = NULL,
+  pc.xi = 0.25,
+  return.tuples = FALSE,
+  return.min = FALSE,
+  interesting.vars = vector(mode = "integer"),
+  require.all.vars = FALSE,
+  use.CUDA = FALSE
+)
 }
 \arguments{
 \item{data}{input data where columns are variables and rows are observations (all numeric)}
@@ -27,6 +38,8 @@ ComputeMaxInfoGains(data, decision, dimensions = 1, divisions = NULL,
 \item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
 \item{return.tuples}{whether to return tuples (and relevant discretization number) where max IG was observed (one tuple and relevant discretization number per variable) - not supported with CUDA nor in 1D}
+
+\item{return.min}{whether to return min instead of max (per tuple, always max per discretization) - not supported with CUDA}
 
 \item{interesting.vars}{variables for which to check the IGs (none = all) - not supported with CUDA}
 

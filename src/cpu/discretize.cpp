@@ -1,10 +1,6 @@
-#include <algorithm>
-#include <cstdint>
-#include <cstring>
-#include <random>
-#include <vector>
-
 #include "discretize.h"
+
+#include <random>
 
 void discretize(
     uint32_t seed,

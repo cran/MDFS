@@ -22,6 +22,7 @@ GetRange <- function (k = 5, n, dimensions, divisions) {
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
 #' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
 #' @param return.tuples whether to return tuples (and relevant discretization number) where max IG was observed (one tuple and relevant discretization number per variable) - not supported with CUDA nor in 1D
+#' @param return.min whether to return min instead of max (per tuple, always max per discretization) - not supported with CUDA
 #' @param interesting.vars variables for which to check the IGs (none = all) - not supported with CUDA
 #' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
 #' @param use.CUDA whether to use CUDA acceleration (must be compiled with CUDA)
@@ -51,6 +52,7 @@ ComputeMaxInfoGains <- function(
     range = NULL,
     pc.xi = 0.25,
     return.tuples = FALSE,
+    return.min = FALSE,
     interesting.vars = vector(mode = "integer"),
     require.all.vars = FALSE,
     use.CUDA = FALSE) {
@@ -147,6 +149,10 @@ ComputeMaxInfoGains <- function(
       stop('CUDA acceleration does not support return.tuples parameter (for now)')
     }
 
+    if (return.min) {
+      stop('CUDA acceleration does not support return.min parameter (for now)')
+    }
+
     if (length(interesting.vars) > 0) {
       stop('CUDA acceleration does not support interesting.vars parameter (for now)')
     }
@@ -165,6 +171,7 @@ ComputeMaxInfoGains <- function(
       as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
       as.logical(require.all.vars),
       as.logical(return.tuples),
+      as.logical(return.min),
       as.logical(use.CUDA))
 
   if (return.tuples) {
@@ -192,13 +199,14 @@ ComputeMaxInfoGains <- function(
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
-#' @param dimensions number of dimensions (a positive integer; 5 max)
+#' @param dimensions number of dimensions (a positive integer; 5 max) - FIXME: only 2D supported for now!
 #' @param divisions number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)
 #' @param discretizations number of discretizations
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
 #' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
 #' @param ig.thr IG threshold above which the tuple is interesting
+#' @param I.lower IG values computed for lower dimension (1D for 2D, etc.)
 #' @param interesting.vars variables for which to check the IGs (none = all)
 #' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
 #' @return A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.
@@ -213,8 +221,10 @@ ComputeMaxInfoGains <- function(
 #'  Additionally attribute named \code{run.params} with run parameters is set on the result.
 #' @examples
 #' \donttest{
+#' ig.1d <- ComputeMaxInfoGains(madelon$data, madelon$decision, dimensions = 1, divisions = 1,
+#'                              range = 0, seed = 0)
 #' ComputeInterestingTuples(madelon$data, madelon$decision, dimensions = 2, divisions = 1,
-#'                          range = 0, seed = 0, ig.thr = 100)
+#'                          range = 0, seed = 0, ig.thr = 100, I.lower = ig.1d$IG)
 #' }
 #' @export
 #' @useDynLib MDFS r_compute_all_matching_tuples
@@ -228,6 +238,7 @@ ComputeInterestingTuples <- function(
     range = NULL,
     pc.xi = 0.25,
     ig.thr,
+    I.lower,
     interesting.vars = vector(mode = "integer"),
     require.all.vars = FALSE) {
   data <- data.matrix(data)
@@ -236,6 +247,10 @@ ComputeInterestingTuples <- function(
 
   if (length(decision) != nrow(data)) {
     stop('Length of decision is not equal to the number of rows in data.')
+  }
+
+  if (length(I.lower) != ncol(data)) {
+    stop('Length of I.lower is not equal to the number of columns in data.')
   }
 
   # try to rebase decision from 1 to 0 (as is the case with e.g. factors)
@@ -310,6 +325,11 @@ ComputeInterestingTuples <- function(
     stop('Dimensions has to be at least 2 for this function to make any sense.')
   }
 
+  if (dimensions != 2) {
+    # FIXME:
+    stop('More dimensions than 2 not supported for now')
+  }
+
   result <- .Call(
       r_compute_all_matching_tuples,
       data,
@@ -322,7 +342,8 @@ ComputeInterestingTuples <- function(
       as.double(pc.xi),
       as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
       as.logical(require.all.vars),
-      as.double(ig.thr))
+      as.double(ig.thr),
+      as.double(I.lower))
 
   if (length(result[[1]]) == 0) {
     warning("No tuples were returned.")

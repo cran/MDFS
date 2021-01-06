@@ -35,6 +35,7 @@ void tablesKernelWrapper(KernelParam param, cudaStream_t stream) {
 	CUDA(cudaPeekAtLastError());
 }
 
+// simplified split kernel (no logarithms, no optimisation for lower dims)
 template<typename CType,
 	int TILE_SIZE,
 	int DIM,

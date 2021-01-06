@@ -1,3 +1,14 @@
+1.1.0 | 2021-01-06
+
+* Interesting tuples functionality was largely redone. It is now limited
+  to 2D and requires inputting 1D IG. However, the results are now
+  interpretable.
+
+* Ability to output minimum IG per tuple instead of only maximum.
+  NB outputted IG is still maximized over discretizations.
+
+* Minor optimizations.
+
 1.0.5 | 2019-11-10
 
 * fix CUDA failure (issue in linking)
