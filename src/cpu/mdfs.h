@@ -9,6 +9,7 @@
 #include "discretize.h"
 
 #include <algorithm>
+#include <limits>
 
 
 template <uint8_t n_dimensions>
