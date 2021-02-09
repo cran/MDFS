@@ -145,7 +145,8 @@ SEXP r_compute_all_matching_tuples(
         SEXP Rin_interesting_vars,
         SEXP Rin_require_all_vars,
         SEXP Rin_ig_thr,
-        SEXP Rin_I_lower)
+        SEXP Rin_I_lower,
+        SEXP Rin_return_matrix)
 {
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
 
@@ -176,27 +177,44 @@ SEXP r_compute_all_matching_tuples(
         REAL(Rin_I_lower)
     );
 
-    MDFSOutput mdfs_output(MDFSOutputType::MatchingTuples, mdfs_info.dimensions, variable_count);
+    MDFSOutputType out_type = asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
 
     mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, dfi, mdfs_output);
 
-    const int result_members_count = 3;
-    const int tuples_count = mdfs_output.getMatchingTuplesCount();
+    if (out_type == MDFSOutputType::AllTuples && asLogical(Rin_return_matrix)) {
+        SEXP Rout_result = PROTECT(allocMatrix(REALSXP, variable_count, variable_count));
 
-    SEXP Rout_igs = PROTECT(allocVector(REALSXP, tuples_count));
-    SEXP Rout_tuples = PROTECT(allocMatrix(INTSXP, tuples_count, mdfs_info.dimensions));
-    SEXP Rout_vars = PROTECT(allocVector(INTSXP, tuples_count));
+        // TODO: perhaps we could avoid copying here at all and fill in this matrix already from the mdfs?
+        mdfs_output.copyAllTuplesMatrix(REAL(Rout_result));
 
-    mdfs_output.copyMatchingTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));
+        UNPROTECT(1);
 
-    SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
-    SET_VECTOR_ELT(Rout_result, 0, Rout_vars);
-    SET_VECTOR_ELT(Rout_result, 1, Rout_tuples);
-    SET_VECTOR_ELT(Rout_result, 2, Rout_igs);
+        return Rout_result;
+    } else {
+        const int result_members_count = 3;
+        // 2D only now
+        const int tuples_count = out_type == MDFSOutputType::AllTuples ? variable_count * (variable_count - 1) : mdfs_output.getMatchingTuplesCount();
 
-    UNPROTECT(1 + result_members_count);
+        SEXP Rout_igs = PROTECT(allocVector(REALSXP, tuples_count));
+        SEXP Rout_tuples = PROTECT(allocMatrix(INTSXP, tuples_count, mdfs_info.dimensions));
+        SEXP Rout_vars = PROTECT(allocVector(INTSXP, tuples_count));
 
-    return Rout_result;
+        if (out_type == MDFSOutputType::AllTuples) {
+            mdfs_output.copyAllTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));
+        } else {
+            mdfs_output.copyMatchingTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));
+        }
+
+        SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
+        SET_VECTOR_ELT(Rout_result, 0, Rout_vars);
+        SET_VECTOR_ELT(Rout_result, 1, Rout_tuples);
+        SET_VECTOR_ELT(Rout_result, 2, Rout_igs);
+
+        UNPROTECT(1 + result_members_count);
+
+        return Rout_result;
+    }
 }
 
 extern "C"

@@ -30,7 +30,8 @@ extern "C"
 	SEXP Rin_interesting_vars,
 	SEXP Rin_require_all_vars,
 	SEXP Rin_ig_thr,
-	SEXP Rin_I_lower
+	SEXP Rin_I_lower,
+	SEXP Rin_return_matrix
 );
 
 extern "C"

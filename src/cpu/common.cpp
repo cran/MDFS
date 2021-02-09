@@ -77,7 +77,7 @@ void TupleGenerator::next(size_t* out) {
 /* MDFSOutput */
 
 MDFSOutput::MDFSOutput(MDFSOutputType type, size_t n_dimensions, size_t variable_count)
-    : max_igs_tuples(nullptr), type(type), n_dimensions(n_dimensions) {
+    : max_igs_tuples(nullptr), type(type), n_dimensions(n_dimensions), n_variables(variable_count) {
     switch(type) {
         case MDFSOutputType::MaxIGs:
             // init to -Inf to ensure we save negative values as well (they happen due to numerical errors with log)
@@ -91,6 +91,11 @@ MDFSOutput::MDFSOutput(MDFSOutputType type, size_t n_dimensions, size_t variable
         case MDFSOutputType::MatchingTuples:
             this->tuples = new std::map<std::tuple<std::vector<size_t>, size_t>, std::tuple<float, size_t>>();
             break;
+
+        case MDFSOutputType::AllTuples:
+            // 2D only now
+            this->all_tuples = new std::vector<float>(variable_count * variable_count, -std::numeric_limits<float>::infinity());
+            break;
    }
 }
 
@@ -103,6 +108,10 @@ MDFSOutput::~MDFSOutput() {
 
         case MDFSOutputType::MatchingTuples:
             delete this->tuples;
+            break;
+
+        case MDFSOutputType::AllTuples:
+            delete this->all_tuples;
             break;
    }
 }
@@ -172,6 +181,20 @@ void MDFSOutput::addTuple(size_t i, float ig, size_t discretization_id, const si
     }
 }
 
+// 2D only now
+void MDFSOutput::updateAllTuplesIG(const size_t* tuple, float *igs, size_t discretization_id) {
+    size_t index_0 = tuple[0] * this->n_variables + tuple[1];
+    size_t index_1 = tuple[1] * this->n_variables + tuple[0];
+
+    if ((*this->all_tuples)[index_0] < igs[0]) {
+        (*this->all_tuples)[index_0] = igs[0];
+    }
+
+    if ((*this->all_tuples)[index_1] < igs[1]) {
+        (*this->all_tuples)[index_1] = igs[1];
+    }
+}
+
 size_t MDFSOutput::getMatchingTuplesCount() const {
     return this->tuples->size();
 }
@@ -186,6 +209,37 @@ void MDFSOutput::copyMatchingTuples(int* matching_tuples_vars, double* IGs, int*
 
         for (size_t j = 0; j < std::get<0>(v->first).size(); ++j) {
             matching_tuples[j * tuples_count + i] = std::get<0>(v->first)[j]; // column-first
+        }
+    }
+}
+
+// 2D only now
+void MDFSOutput::copyAllTuples(int* matching_tuples_vars, double* IGs, int* matching_tuples) const {
+    size_t k = 0;
+    const size_t n_tuples = this->n_variables * (this->n_variables - 1);
+
+    for (size_t i = 0; i < this->n_variables; i++) {
+        for (size_t j = i + 1; j < this->n_variables; j++) {
+            matching_tuples_vars[k] = i;
+            IGs[k] = (*this->all_tuples)[i*this->n_variables + j];
+            matching_tuples[k] = i;
+            matching_tuples[n_tuples + k] = j;
+            k++;
+            matching_tuples_vars[k] = j;
+            IGs[k] = (*this->all_tuples)[j*this->n_variables + i];
+            matching_tuples[k] = i;
+            matching_tuples[n_tuples + k] = j;
+            k++;
+        }
+    }
+}
+
+// 2D only now
+void MDFSOutput::copyAllTuplesMatrix(double* out_matrix) const {
+    for (size_t i = 0; i < this->n_variables; i++) {
+        for (size_t j = 0; j < this->n_variables; j++) {
+            // row-first to column-first conversion
+            out_matrix[j*this->n_variables + i] = (*this->all_tuples)[i*this->n_variables + j];
         }
     }
 }

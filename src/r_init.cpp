@@ -7,7 +7,7 @@
 
 static const R_CallMethodDef callMethods[]  = {
   CALLDEF(r_compute_max_ig, 13),
-  CALLDEF(r_compute_all_matching_tuples, 12),
+  CALLDEF(r_compute_all_matching_tuples, 13),
   CALLDEF(r_discretize, 6),
   {NULL, NULL, 0}
 };

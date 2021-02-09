@@ -13,10 +13,11 @@ ComputeInterestingTuples(
   seed = NULL,
   range = NULL,
   pc.xi = 0.25,
-  ig.thr,
+  ig.thr = 0,
   I.lower,
   interesting.vars = vector(mode = "integer"),
-  require.all.vars = FALSE
+  require.all.vars = FALSE,
+  return.matrix = FALSE
 )
 }
 \arguments{
@@ -36,13 +37,15 @@ ComputeInterestingTuples(
 
 \item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
-\item{ig.thr}{IG threshold above which the tuple is interesting}
+\item{ig.thr}{IG threshold above which the tuple is interesting (0 and negative mean no filtering)}
 
 \item{I.lower}{IG values computed for lower dimension (1D for 2D, etc.)}
 
 \item{interesting.vars}{variables for which to check the IGs (none = all)}
 
 \item{require.all.vars}{boolean whether to require tuple to consist of only interesting.vars}
+
+\item{return.matrix}{boolean whether to return a matrix instead of a list (ignored if not using the optimised method variant)}
 }
 \value{
 A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.
@@ -58,6 +61,11 @@ A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tup
 }
 \description{
 Interesting tuples
+}
+\details{
+If no filtering is applied, this function is able to run in an
+optimised fashion. It is recommended to avoid filtering if only it is
+feasible.
 }
 \examples{
 \donttest{

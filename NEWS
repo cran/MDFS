@@ -1,3 +1,20 @@
+1.2.0 | 2021-02-09
+
+* IG threshold equal 0 (the new default value) or below means that there
+  is no threshold filtering applied.
+  Some IG results might be negative due to logarithm rounding and they
+  are passed unchanged and unfiltered to the user now.
+  Any positive IG threshold filters normally like it did before.
+
+* Unfiltered tuple IG computation uses an optimised procedure now
+  which is considerably faster.
+  Speedup ratio is a logarithmic function of the number of variables.
+  This brings tuple IG computation's performance close to that of the
+  max IG.
+
+* The optimised tuple IG computation procedure allows now to return the
+  IG matrix directly.
+
 1.1.1 | 2021-01-21
 
 * Fix compilation on GCC 11.

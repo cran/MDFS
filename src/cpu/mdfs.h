@@ -27,6 +27,11 @@ void scalarMDFS(
     }
     const float cmin = std::min(c[0], c[1]);
 
+    // this is to treat ig_thr=0 and below as unset (ignored) and allow for the
+    // numeric errors to pass through the relevance filter (IGs end up being
+    // negative in some rare cases due to logarithm rounding)
+    const float ig_thr = mdfs_info.ig_thr > 0.0f ? mdfs_info.ig_thr : -std::numeric_limits<float>::infinity();
+
     float* I_lower = nullptr;
     if (mdfs_info.I_lower != nullptr) {
         I_lower = new float[raw_data->info.variable_count];
@@ -205,10 +210,14 @@ void scalarMDFS(
 
                     case MDFSOutputType::MatchingTuples:
                         for (size_t v = 0; v < n_dimensions; ++v) {
-                            if (igs[v] > mdfs_info.ig_thr) {
+                            if (igs[v] > ig_thr) {
                                 out.addTuple(tuple[v], igs[v], discretization_id, tuple);
                             }
                         }
+                        break;
+
+                    case MDFSOutputType::AllTuples:
+                        out.updateAllTuplesIG(tuple, igs, discretization_id);
                         break;
                 }
             } while (true);

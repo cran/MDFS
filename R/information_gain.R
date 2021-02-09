@@ -197,6 +197,11 @@ ComputeMaxInfoGains <- function(
 
 #' Interesting tuples
 #'
+#' @details
+#' If no filtering is applied, this function is able to run in an
+#' optimised fashion. It is recommended to avoid filtering if only it is
+#' feasible.
+#'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
 #' @param dimensions number of dimensions (a positive integer; 5 max) - FIXME: only 2D supported for now!
@@ -205,10 +210,11 @@ ComputeMaxInfoGains <- function(
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
 #' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
-#' @param ig.thr IG threshold above which the tuple is interesting
+#' @param ig.thr IG threshold above which the tuple is interesting (0 and negative mean no filtering)
 #' @param I.lower IG values computed for lower dimension (1D for 2D, etc.)
 #' @param interesting.vars variables for which to check the IGs (none = all)
 #' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
+#' @param return.matrix boolean whether to return a matrix instead of a list (ignored if not using the optimised method variant)
 #' @return A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.
 #'
 #'  The following columns are present in the \code{\link{data.frame}}:
@@ -237,10 +243,11 @@ ComputeInterestingTuples <- function(
     seed = NULL,
     range = NULL,
     pc.xi = 0.25,
-    ig.thr,
+    ig.thr = 0,
     I.lower,
     interesting.vars = vector(mode = "integer"),
-    require.all.vars = FALSE) {
+    require.all.vars = FALSE,
+    return.matrix = FALSE) {
   data <- data.matrix(data)
   storage.mode(data) <- "double"
   decision <- as.vector(decision, mode="integer")
@@ -343,19 +350,24 @@ ComputeInterestingTuples <- function(
       as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
       as.logical(require.all.vars),
       as.double(ig.thr),
-      as.double(I.lower))
+      as.double(I.lower),
+      as.logical(return.matrix))
 
-  if (length(result[[1]]) == 0) {
-    warning("No tuples were returned.")
-    return(NULL)
+  if (length(interesting.vars) == 0 && ig.thr <= 0 && return.matrix) {
+    # do nothing, we have a matrix for you
+  } else {
+    if (length(result[[1]]) == 0) {
+      warning("No tuples were returned.")
+      return(NULL)
+    }
+
+    names(result) <- c("Var", "Tuple", "IG")
+
+    result$Var = result$Var + 1 # restore R-compatible 1-based indices
+    result$Tuple = result$Tuple + 1 # restore R-compatible 1-based indices
+
+    result <- as.data.frame(result)
   }
-
-  names(result) <- c("Var", "Tuple", "IG")
-
-  result$Var = result$Var + 1 # restore R-compatible 1-based indices
-  result$Tuple = result$Tuple + 1 # restore R-compatible 1-based indices
-
-  result <- as.data.frame(result)
 
   attr(result, 'run.params') <- list(
     dimensions      = dimensions,
