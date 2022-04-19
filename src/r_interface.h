@@ -18,7 +18,21 @@ SEXP r_compute_max_ig(
 );
 
 extern "C"
-	SEXP r_compute_all_matching_tuples(
+SEXP r_compute_max_ig_discrete(
+	SEXP Rin_data,
+	SEXP Rin_decision,
+	SEXP Rin_dimensions,
+	SEXP Rin_divisions,
+	SEXP Rin_pseudocount,
+	SEXP Rin_interesting_vars,
+	SEXP Rin_require_all_vars,
+	SEXP Rin_return_tuples,
+	SEXP Rin_return_min,
+	SEXP Rin_use_cuda
+);
+
+extern "C"
+SEXP r_compute_all_matching_tuples(
 	SEXP Rin_data,
 	SEXP Rin_decision,
 	SEXP Rin_dimensions,
@@ -35,7 +49,21 @@ extern "C"
 );
 
 extern "C"
-	SEXP r_discretize(
+SEXP r_compute_all_matching_tuples_discrete(
+	SEXP Rin_data,
+	SEXP Rin_decision,
+	SEXP Rin_dimensions,
+	SEXP Rin_divisions,
+	SEXP Rin_pseudocount,
+	SEXP Rin_interesting_vars,
+	SEXP Rin_require_all_vars,
+	SEXP Rin_ig_thr,
+	SEXP Rin_I_lower,
+	SEXP Rin_return_matrix
+);
+
+extern "C"
+SEXP r_discretize(
 	SEXP Rin_variable,
 	SEXP Rin_variable_nr,
 	SEXP Rin_divisions,

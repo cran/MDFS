@@ -14,7 +14,7 @@ MDFSInfo::MDFSInfo(
     int* interesting_vars,
     size_t interesting_vars_count,
     bool require_all_vars,
-    double* I_lower
+    const double* I_lower
 ) : dimensions(dimensions), divisions(divisions), discretizations(discretizations),
     pseudo(pseudo), ig_thr(ig_thr), interesting_vars(interesting_vars),
     interesting_vars_count(interesting_vars_count), require_all_vars(require_all_vars),

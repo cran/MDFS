@@ -1,3 +1,25 @@
+1.3.0 | 2022-04-19
+
+* Adds discrete variant which works (as the name suggests) on
+  discrete data (as opposed to continuous data) and skips the
+  randomised discretisation procedure entirely. A dedicated
+  ComputeMaxInfoGainsDiscrete and ComputeInterestingTuplesDiscrete
+  functions are provided for this purpose. The current limitation
+  is that all variables must have the same cardinality.
+
+* Adds decisionless mode -- to allow to compute entropy and mutual
+  information using the same engine. To compute these, leave the
+  decision parameter NULL.
+
+* Restores ability to not set I.lower in ComputeInterestingTuples and
+  thus also to search for higher-dimension interesting tuples.
+
+* Removes legacy undocumented fallback to "guessed" pc.xi (when it was
+  explicitly set to NULL) as it conflicted with our recommendation.
+
+* Improves validation of input.
+
+
 1.2.0 | 2021-02-09
 
 * IG threshold equal 0 (the new default value) or below means that there

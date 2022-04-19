@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <cstring>
 
-template <uint8_t n_dimensions>
+
+// only 1 and 2 decision classes are supported
+template <uint8_t n_decision_classes, uint8_t n_dimensions>
 inline void count_counters(
     const uint8_t *data,
     const uint8_t *decision,
@@ -17,11 +19,10 @@ inline void count_counters(
     float* counters,
     const size_t n_cubes,
 
-    const float p0,
-    const float p1,
+    const float p[n_decision_classes],
     const size_t* d
 ) {
-    std::memset(counters, 0, sizeof(float) * n_cubes * 2);
+    std::memset(counters, 0, sizeof(float) * n_cubes * n_decision_classes);
 
     for (size_t o = 0; o < n_objects; ++o) {
         size_t bucket = data[tuple[0] * n_objects + o];
@@ -38,13 +39,19 @@ inline void count_counters(
             bucket += d[2] * data[tuple[4] * n_objects + o];
         }
 
-        size_t dec = decision[o];
-        counters[dec * n_cubes + bucket] += 1.0f;
+        if (n_decision_classes > 1) {
+            size_t dec = decision[o];
+            counters[dec * n_cubes + bucket] += 1.0f;
+        } else {
+            counters[bucket] += 1.0f;
+        }
     }
 
     for (size_t c = 0; c < n_cubes; ++c) {
-        counters[0 * n_cubes + c] += p0;
-        counters[1 * n_cubes + c] += p1;
+        counters[c] += p[0];
+        if (n_decision_classes > 1) {
+            counters[n_cubes + c] += p[1];
+        }
     }
 }
 

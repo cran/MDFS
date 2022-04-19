@@ -18,7 +18,7 @@ public:
     int* interesting_vars;  // has to be sorted
     size_t interesting_vars_count;
     bool require_all_vars;
-    double* I_lower;
+    const double* I_lower;
 
     MDFSInfo(
         size_t dimensions,
@@ -29,7 +29,7 @@ public:
         int* interesting_vars,
         size_t interesting_vars_count,
         bool require_all_vars,
-        double* I_lower
+        const double* I_lower
     );
 };
 

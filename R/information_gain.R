@@ -1,17 +1,10 @@
-GetRange <- function (k = 5, n, dimensions, divisions) {
-  ksi <- (k/n)^(1/dimensions)
-  suggested.range <- (1 - ksi*(1+divisions)) / (1 - ksi*(1-divisions))
-  range <- max(0, min(suggested.range, 1))
-  reasonable.range <- 0.25
-  if (range == 0) {
-    warning('Too small sample for the test')
-  } else if (range < reasonable.range) {
-    warning('Too small sample for multiple discretizations')
-  }
-  range
-}
-
 #' Max information gains
+#'
+#' @details
+#' If \code{decision} is omitted, this function calculates either the variable entropy
+#' (in 1D) or mutual information (in higher dimensions).
+#' Translate "IG" respectively to entropy or mutual information in the
+#' rest of this function's description.
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
@@ -44,7 +37,7 @@ GetRange <- function (k = 5, n, dimensions, divisions) {
 #' @useDynLib MDFS r_compute_max_ig
 ComputeMaxInfoGains <- function(
     data,
-    decision,
+    decision = NULL,
     dimensions = 1,
     divisions = NULL,
     discretizations = 1,
@@ -58,103 +51,75 @@ ComputeMaxInfoGains <- function(
     use.CUDA = FALSE) {
   data <- data.matrix(data)
   storage.mode(data) <- "double"
-  decision <- as.vector(decision, mode="integer")
 
-  if (length(decision) != nrow(data)) {
-    stop('Length of decision is not equal to the number of rows in data.')
+  decision <- prepare_decision(decision)
+
+  if (!is.null(decision)) {
+    if (length(decision) != nrow(data)) {
+      stop("Length of decision is not equal to the number of rows in data.")
+    }
+
+    count_0 <- sum(decision == 0)
+    min.obj <- min(count_0, length(decision) - count_0)
+  } else {
+    min.obj <- nrow(data)
   }
 
-  # try to rebase decision from 1 to 0 (as is the case with e.g. factors)
-  if (!any(decision == 0)) {
-    decision <- decision - as.integer(1) # as.integer is crucial in keeping this an integer vector
-  }
-
-  if (!all(decision == 0 | decision == 1)) {
-    stop('Decision must be binary.')
-  }
-
-  if (all(decision == 0) || all(decision == 1)) {
-    stop('Both classes have to be represented.')
-  }
-
-  if (as.integer(dimensions) != dimensions || dimensions < 1) {
-    stop('Dimensions has to be a positive integer.')
-  }
-
-  if (dimensions > 5) {
-    stop('Dimensions cannot exceed 5')
-  }
+  dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(1), as.integer(5))
 
   if (is.null(divisions)) {
     if (dimensions == 1) {
-      divisions <- as.integer(
-        min(
-          max(
-            floor(min(sum(decision==0),sum(decision==1))^(1/2/dimensions)),
-            1),
-          15)
-      )
+      divisions <- min(floor(sqrt(min.obj)), 15)
     } else {
       divisions <- 1
     }
-  } else if (as.integer(divisions) != divisions || divisions < 1 || divisions > 15) {
-    stop('Divisions has to be an integer between 1 and 15 (inclusive).')
   }
 
-  if (as.integer(discretizations) != discretizations || discretizations < 1) {
-    stop('Discretizations has to be a positive integer.')
-  }
+  divisions <- prepare_integer_in_bounds(divisions, "Divisions", as.integer(1), as.integer(15))
 
-  if (is.null(pc.xi)) {
-    if (dimensions == 1 && discretizations <= 5) {
-      pc.xi <- 0.25
-    } else {
-      pc.xi <- 2
-    }
-  } else if (!is.numeric(pc.xi) || pc.xi <= 0) {
-    stop('pc.xi has to be a real number strictly greater than 0.')
-  }
+  discretizations <- prepare_integer_in_bounds(discretizations, "Discretizations", as.integer(1))
+
+  pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
 
   if (is.null(range)) {
-    min.obj <- min(sum(decision == 0), sum(decision == 1))
     range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
-  } else if (as.double(range) != range || range < 0 || range > 1) {
-    stop('Range has to be a number between 0.0 and 1.0')
   }
 
+  range <- prepare_double_in_bounds(range, "Range", 0.0, 1.0)
+
   if (range == 0 && discretizations > 1) {
-    stop('Zero range does not make sense with more than one discretization. All will always be equal.')
+    stop("Zero range does not make sense with more than one discretization. All will always be equal.")
   }
 
   if (is.null(seed)) {
-    seed <- round(runif(1, 0, 2^31-1)) # unsigned passed as signed, the highest bit remains unused for best compatibility
-  } else if (as.integer(seed) != seed || seed < 0 || seed > 2^31-1) {
-    warning('Only integer seeds from 0 to 2^31-1 are portable. Using non-portable seed may make result harder to reproduce.')
+    seed <- round(runif(1, 0, 2^31 - 1)) # unsigned passed as signed, the highest bit remains unused for best compatibility
   }
 
+  seed <- prepare_integer_in_bounds(seed, "Seed", as.integer(0))
+
   if (dimensions == 1 && return.tuples) {
-    stop('return.tuples does not make sense in 1D')
+    stop("return.tuples does not make sense in 1D")
   }
 
   if (use.CUDA) {
     if (dimensions == 1) {
-      stop('CUDA acceleration does not support 1 dimension')
+      stop("CUDA acceleration does not support 1 dimension")
     }
 
-    if ((divisions+1)^dimensions > 256) {
-      stop('CUDA acceleration does not support more than 256 cubes = (divisions+1)^dimensions')
+    if ((divisions + 1)^dimensions > 256) {
+      stop("CUDA acceleration does not support more than 256 cubes = (divisions+1)^dimensions")
     }
 
     if (return.tuples) {
-      stop('CUDA acceleration does not support return.tuples parameter (for now)')
+      stop("CUDA acceleration does not support return.tuples parameter (for now)")
     }
 
     if (return.min) {
-      stop('CUDA acceleration does not support return.min parameter (for now)')
+      stop("CUDA acceleration does not support return.min parameter (for now)")
     }
 
     if (length(interesting.vars) > 0) {
-      stop('CUDA acceleration does not support interesting.vars parameter (for now)')
+      stop("CUDA acceleration does not support interesting.vars parameter (for now)")
     }
   }
 
@@ -162,12 +127,12 @@ ComputeMaxInfoGains <- function(
       r_compute_max_ig,
       data,
       decision,
-      as.integer(dimensions),
-      as.integer(divisions),
-      as.integer(discretizations),
-      as.integer(seed),
-      as.double(range),
-      as.double(pc.xi),
+      dimensions,
+      divisions,
+      discretizations,
+      seed,
+      range,
+      pc.xi,
       as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
       as.logical(require.all.vars),
       as.logical(return.tuples),
@@ -176,15 +141,15 @@ ComputeMaxInfoGains <- function(
 
   if (return.tuples) {
     names(out) <- c("IG", "Tuple", "Discretization.nr")
-    out$Tuple = t(out$Tuple + 1) # restore R-compatible 1-based indices, transpose to remain compatible with ComputeInterestingTuples
-    out$Discretization.nr = out$Discretization.nr + 1 # restore R-compatible 1-based indices
+    out$Tuple <- t(out$Tuple + 1) # restore R-compatible 1-based indices, transpose to remain compatible with ComputeInterestingTuples
+    out$Discretization.nr <- out$Discretization.nr + 1 # restore R-compatible 1-based indices
   } else {
     names(out) <- c("IG")
   }
 
   out <- as.data.frame(out)
 
-  attr(out, 'run.params') <- list(
+  attr(out, "run.params") <- list(
     dimensions      = dimensions,
     divisions       = divisions,
     discretizations = discretizations,
@@ -195,16 +160,114 @@ ComputeMaxInfoGains <- function(
   return(out)
 }
 
+#' Max information gains (discrete)
+#'
+#' @details
+#' If \code{decision} is omitted, this function calculates either the variable entropy
+#' (in 1D) or mutual information (in higher dimensions).
+#' Translate "IG" respectively to entropy or mutual information in the
+#' rest of this function's description.
+#'
+#' @param data input data where columns are variables and rows are observations (all discrete with the same number of categories)
+#' @param decision decision variable as a binary sequence of length equal to number of observations
+#' @param dimensions number of dimensions (a positive integer; 5 max)
+#' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
+#' @param return.tuples whether to return tuples where max IG was observed (one tuple per variable) - not supported with CUDA nor in 1D
+#' @param return.min whether to return min instead of max (per tuple) - not supported with CUDA
+#' @param interesting.vars variables for which to check the IGs (none = all) - not supported with CUDA
+#' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
+#' @return A \code{\link{data.frame}} with the following columns:
+#'  \itemize{
+#'    \item \code{IG} -- max information gain (of each variable)
+#'    \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns, available only when \code{return.tuples == T})
+#'    \item \code{Discretization.nr} -- always 1 (for compatibility with the non-discrete function; available only when \code{return.tuples == T})
+#'  }
+#'
+#'  Additionally attribute named \code{run.params} with run parameters is set on the result.
+#' @examples
+#' \donttest{
+#' ComputeMaxInfoGainsDiscrete(madelon$data > 500, madelon$decision, dimensions = 2)
+#' }
+#' @importFrom stats runif
+#' @export
+#' @useDynLib MDFS r_compute_max_ig_discrete
+ComputeMaxInfoGainsDiscrete <- function(
+    data,
+    decision = NULL,
+    dimensions = 1,
+    pc.xi = 0.25,
+    return.tuples = FALSE,
+    return.min = FALSE,
+    interesting.vars = vector(mode = "integer"),
+    require.all.vars = FALSE) {
+  data <- data.matrix(data)
+  storage.mode(data) <- "integer"
+
+  decision <- prepare_decision(decision)
+
+  if (!is.null(decision)) {
+    if (length(decision) != nrow(data)) {
+      stop("Length of decision is not equal to the number of rows in data.")
+    }
+  }
+
+  dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(1), as.integer(5))
+
+  divisions <- length(unique(c(data))) - 1
+
+  divisions <- prepare_integer_in_bounds(divisions, "Divisions", as.integer(1), as.integer(15))
+
+  pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
+
+  if (dimensions == 1 && return.tuples) {
+    stop("return.tuples does not make sense in 1D")
+  }
+
+  out <- .Call(
+      r_compute_max_ig_discrete,
+      data,
+      decision,
+      dimensions,
+      divisions,
+      pc.xi,
+      as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
+      as.logical(require.all.vars),
+      as.logical(return.tuples),
+      as.logical(return.min),
+      FALSE)  # CUDA variant is not implemented here
+
+  if (return.tuples) {
+    names(out) <- c("IG", "Tuple", "Discretization.nr")
+    out$Tuple <- t(out$Tuple + 1) # restore R-compatible 1-based indices, transpose to remain compatible with ComputeInterestingTuples
+    out$Discretization.nr <- out$Discretization.nr + 1 # restore R-compatible 1-based indices
+  } else {
+    names(out) <- c("IG")
+  }
+
+  out <- as.data.frame(out)
+
+  attr(out, "run.params") <- list(
+    dimensions      = dimensions,
+    pc.xi           = pc.xi)
+
+  return(out)
+}
+
 #' Interesting tuples
 #'
 #' @details
-#' If no filtering is applied, this function is able to run in an
-#' optimised fashion. It is recommended to avoid filtering if only it is
+#' If running in 2D and no filtering is applied, this function is able to run in an
+#' optimised fashion. It is recommended to avoid filtering in 2D if only it is
 #' feasible.
+#'
+#' @details
+#' If \code{decision} is omitted, this function calculates mutual information.
+#' Translate "IG" to mutual information in the rest of this function's
+#' description, except for \code{I.lower} where it means entropy.
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
-#' @param dimensions number of dimensions (a positive integer; 5 max) - FIXME: only 2D supported for now!
+#' @param dimensions number of dimensions (a positive integer; 5 max)
 #' @param divisions number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)
 #' @param discretizations number of discretizations
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
@@ -236,7 +299,7 @@ ComputeMaxInfoGains <- function(
 #' @useDynLib MDFS r_compute_all_matching_tuples
 ComputeInterestingTuples <- function(
     data,
-    decision,
+    decision = NULL,
     dimensions = 2,
     divisions = NULL,
     discretizations = 1,
@@ -244,116 +307,88 @@ ComputeInterestingTuples <- function(
     range = NULL,
     pc.xi = 0.25,
     ig.thr = 0,
-    I.lower,
+    I.lower = NULL,
     interesting.vars = vector(mode = "integer"),
     require.all.vars = FALSE,
     return.matrix = FALSE) {
   data <- data.matrix(data)
   storage.mode(data) <- "double"
-  decision <- as.vector(decision, mode="integer")
 
-  if (length(decision) != nrow(data)) {
-    stop('Length of decision is not equal to the number of rows in data.')
+  if (!is.null(I.lower)) {
+    if (length(I.lower) != ncol(data)) {
+      stop("Length of I.lower is not equal to the number of columns in data.")
+    }
+
+    if (dimensions != 2) {
+      # TODO:
+      stop("More dimensions than 2 not supported with I.lower set.")
+    }
+
+    I.lower <- as.double(I.lower)
   }
 
-  if (length(I.lower) != ncol(data)) {
-    stop('Length of I.lower is not equal to the number of columns in data.')
+  decision <- prepare_decision(decision)
+
+  if (!is.null(decision)) {
+    if (length(decision) != nrow(data)) {
+      stop("Length of decision is not equal to the number of rows in data.")
+    }
+
+    count_0 <- sum(decision == 0)
+    min.obj <- min(count_0, length(decision) - count_0)
+  } else {
+    min.obj <- nrow(data)
   }
 
-  # try to rebase decision from 1 to 0 (as is the case with e.g. factors)
-  if (!any(decision == 0)) {
-    decision <- decision - as.integer(1) # as.integer is crucial in keeping this an integer vector
-  }
-
-  if (!all(decision == 0 | decision == 1)) {
-    stop('Decision must be binary.')
-  }
-
-  if (all(decision == 0) || all(decision == 1)) {
-    stop('Both classes have to be represented.')
-  }
-
-  if (as.integer(dimensions) != dimensions || dimensions < 1) {
-    stop('Dimensions has to be a positive integer.')
-  }
-
-  if (dimensions > 5) {
-    stop('Dimensions cannot exceed 5')
-  }
+  dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(2), as.integer(5))
 
   if (is.null(divisions)) {
     if (dimensions == 1) {
-      divisions <- as.integer(
-        min(
-          max(
-            floor(min(sum(decision==0),sum(decision==1))^(1/2/dimensions)),
-            1),
-          15)
-      )
+      divisions <- min(floor(sqrt(min.obj)), 15)
     } else {
       divisions <- 1
     }
-  } else if (as.integer(divisions) != divisions || divisions < 1 || divisions > 15) {
-    stop('Divisions has to be an integer between 1 and 15 (inclusive).')
   }
 
-  if (as.integer(discretizations) != discretizations || discretizations < 1) {
-    stop('Discretizations has to be a positive integer.')
-  }
+  divisions <- prepare_integer_in_bounds(divisions, "Divisions", as.integer(1), as.integer(15))
 
-  if (is.null(pc.xi)) {
-    if (dimensions == 1 && discretizations <= 5) {
-      pc.xi <- 0.25
-    } else {
-      pc.xi <- 2
-    }
-  } else if (!is.numeric(pc.xi) || pc.xi <= 0) {
-    stop('pc.xi has to be a real number strictly greater than 0.')
-  }
+  discretizations <- prepare_integer_in_bounds(discretizations, "Discretizations", as.integer(1))
+
+  pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
 
   if (is.null(range)) {
-    min.obj <- min(sum(decision == 0), sum(decision == 1))
     range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
-  } else if (as.double(range) != range || range < 0 || range > 1) {
-    stop('Range has to be a number between 0.0 and 1.0')
   }
 
+  range <- prepare_double_in_bounds(range, "Range", 0.0, 1.0)
+
   if (range == 0 && discretizations > 1) {
-    stop('Zero range does not make sense with more than one discretization. All will always be equal.')
+    stop("Zero range does not make sense with more than one discretization. All will always be equal.")
   }
 
   if (is.null(seed)) {
-    seed <- round(runif(1, 0, 2^31-1)) # unsigned passed as signed, the highest bit remains unused for best compatibility
-  } else if (as.integer(seed) != seed || seed < 0 || seed > 2^31-1) {
-    warning('Only integer seeds from 0 to 2^31-1 are portable. Using non-portable seed may make result harder to reproduce.')
+    seed <- round(runif(1, 0, 2^31 - 1)) # unsigned passed as signed, the highest bit remains unused for best compatibility
   }
 
-  if (dimensions < 2) {
-    stop('Dimensions has to be at least 2 for this function to make any sense.')
-  }
-
-  if (dimensions != 2) {
-    # FIXME:
-    stop('More dimensions than 2 not supported for now')
-  }
+  seed <- prepare_integer_in_bounds(seed, "Seed", as.integer(0))
 
   result <- .Call(
       r_compute_all_matching_tuples,
       data,
       decision,
-      as.integer(dimensions),
-      as.integer(divisions),
-      as.integer(discretizations),
-      as.integer(seed),
-      as.double(range),
-      as.double(pc.xi),
+      dimensions,
+      divisions,
+      discretizations,
+      seed,
+      range,
+      pc.xi,
       as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
       as.logical(require.all.vars),
       as.double(ig.thr),
-      as.double(I.lower),
+      I.lower,
       as.logical(return.matrix))
 
-  if (length(interesting.vars) == 0 && ig.thr <= 0 && return.matrix) {
+  if (dimensions == 2 && length(interesting.vars) == 0 && ig.thr <= 0 && return.matrix) {
     # do nothing, we have a matrix for you
   } else {
     if (length(result[[1]]) == 0) {
@@ -363,13 +398,13 @@ ComputeInterestingTuples <- function(
 
     names(result) <- c("Var", "Tuple", "IG")
 
-    result$Var = result$Var + 1 # restore R-compatible 1-based indices
-    result$Tuple = result$Tuple + 1 # restore R-compatible 1-based indices
+    result$Var <- result$Var + 1 # restore R-compatible 1-based indices
+    result$Tuple <- result$Tuple + 1 # restore R-compatible 1-based indices
 
     result <- as.data.frame(result)
   }
 
-  attr(result, 'run.params') <- list(
+  attr(result, "run.params") <- list(
     dimensions      = dimensions,
     divisions       = divisions,
     discretizations = discretizations,
@@ -380,70 +415,121 @@ ComputeInterestingTuples <- function(
   return(result)
 }
 
-#' Discretize variable on demand
+#' Interesting tuples (discrete)
 #'
-#' @param data input data where columns are variables and rows are observations (all numeric)
-#' @param variable.idx variable index (as it appears in \code{data})
-#' @param divisions number of divisions
-#' @param discretization.nr discretization number (positive integer)
-#' @param seed seed for PRNG
-#' @param range discretization range
-#' @return Discretized variable.
+#' @details
+#' If running in 2D and no filtering is applied, this function is able to run in an
+#' optimised fashion. It is recommended to avoid filtering in 2D if only it is
+#' feasible.
+#'
+#' @details
+#' If \code{decision} is omitted, this function calculates mutual information.
+#' Translate "IG" to mutual information in the rest of this function's
+#' description, except for \code{I.lower} where it means entropy.
+#'
+#' @param data input data where columns are variables and rows are observations (all discrete with the same number of categories)
+#' @param decision decision variable as a binary sequence of length equal to number of observations
+#' @param dimensions number of dimensions (a positive integer; 5 max)
+#' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
+#' @param ig.thr IG threshold above which the tuple is interesting (0 and negative mean no filtering)
+#' @param I.lower IG values computed for lower dimension (1D for 2D, etc.)
+#' @param interesting.vars variables for which to check the IGs (none = all)
+#' @param require.all.vars boolean whether to require tuple to consist of only interesting.vars
+#' @param return.matrix boolean whether to return a matrix instead of a list (ignored if not using the optimised method variant)
+#' @return A \code{\link{data.frame}} or \code{\link{NULL}} (following a warning) if no tuples are found.
+#'
+#'  The following columns are present in the \code{\link{data.frame}}:
+#'  \itemize{
+#'    \item \code{Var} -- interesting variable index
+#'    \item \code{Tuple.1, Tuple.2, ...} -- corresponding tuple (up to \code{dimensions} columns)
+#'    \item \code{IG} -- information gain achieved by \code{var} in \code{Tuple.*}
+#'  }
+#'
+#'  Additionally attribute named \code{run.params} with run parameters is set on the result.
 #' @examples
-#' Discretize(madelon$data, 3, 1, 1, 0, 0.5)
+#' \donttest{
+#' ig.1d <- ComputeMaxInfoGainsDiscrete(madelon$data > 500, madelon$decision, dimensions = 1)
+#' ComputeInterestingTuplesDiscrete(madelon$data > 500, madelon$decision, dimensions = 2,
+#'                                  ig.thr = 100, I.lower = ig.1d$IG)
+#' }
 #' @export
-#' @useDynLib MDFS r_discretize
-Discretize <- function(
+#' @useDynLib MDFS r_compute_all_matching_tuples_discrete
+ComputeInterestingTuplesDiscrete <- function(
     data,
-    variable.idx,
-    divisions,
-    discretization.nr,
-    seed,
-    range) {
+    decision = NULL,
+    dimensions = 2,
+    pc.xi = 0.25,
+    ig.thr = 0,
+    I.lower = NULL,
+    interesting.vars = vector(mode = "integer"),
+    require.all.vars = FALSE,
+    return.matrix = FALSE) {
   data <- data.matrix(data)
-  storage.mode(data) <- "double"
+  storage.mode(data) <- "integer"
 
-  if (as.integer(divisions) != divisions || divisions < 1 || divisions > 15) {
-    stop('Divisions has to be an integer between 1 and 15 (inclusive).')
+  if (!is.null(I.lower)) {
+    if (length(I.lower) != ncol(data)) {
+      stop("Length of I.lower is not equal to the number of columns in data.")
+    }
+
+    if (dimensions != 2) {
+      # TODO:
+      stop("More dimensions than 2 not supported with I.lower set.")
+    }
+
+    I.lower <- as.double(I.lower)
   }
 
-  if (as.integer(variable.idx) != variable.idx || variable.idx < 1) {
-    stop('variable.idx has to be a positive integer.')
+  decision <- prepare_decision(decision)
+
+  if (!is.null(decision)) {
+    if (length(decision) != nrow(data)) {
+      stop("Length of decision is not equal to the number of rows in data.")
+    }
   }
 
-  if (variable.idx > dim(data)[2]) {
-    stop('variable.idx has to be in data bounds.')
-  }
+  dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(2), as.integer(5))
 
-  if (as.integer(discretization.nr) != discretization.nr || discretization.nr < 1) {
-    stop('discretization.nr has to be a positive integer.')
-  }
+  divisions <- length(unique(c(data))) - 1
 
-  if (as.double(range) != range || range < 0 || range > 1) {
-    stop('Range has to be a number between 0.0 and 1.0')
-  }
+  divisions <- prepare_integer_in_bounds(divisions, "Divisions", as.integer(1), as.integer(15))
 
-  if (as.integer(seed) != seed || seed < 0 || seed > 2^31-1) {
-    warning('Only integer seeds from 0 to 2^31-1 are portable. Using non-portable seed may make result harder to reproduce.')
-  }
-
-  variable <- data[, variable.idx]
+  pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
 
   result <- .Call(
-      r_discretize,
-      variable,
-      as.integer(variable.idx - 1), # convert to C 0-based
-      as.integer(divisions),
-      as.integer(discretization.nr - 1), # convert to C 0-based
-      as.integer(seed),
-      as.double(range))
+      r_compute_all_matching_tuples_discrete,
+      data,
+      decision,
+      dimensions,
+      divisions,
+      pc.xi,
+      as.integer(interesting.vars[order(interesting.vars)] - 1),  # send C-compatible 0-based indices
+      as.logical(require.all.vars),
+      as.double(ig.thr),
+      I.lower,
+      as.logical(return.matrix))
 
-  attr(result, 'run.params') <- list(
-    variable.idx      = variable.idx,
-    divisions         = divisions,
-    discretization.nr = discretization.nr,
-    seed              = seed,
-    range             = range)
+  if (dimensions == 2 && length(interesting.vars) == 0 && ig.thr <= 0 && return.matrix) {
+    # do nothing, we have a matrix for you
+  } else {
+    if (length(result[[1]]) == 0) {
+      warning("No tuples were returned.")
+      return(NULL)
+    }
+
+    names(result) <- c("Var", "Tuple", "IG")
+
+    result$Var <- result$Var + 1 # restore R-compatible 1-based indices
+    result$Tuple <- result$Tuple + 1 # restore R-compatible 1-based indices
+
+    result <- as.data.frame(result)
+  }
+
+  attr(result, "run.params") <- list(
+    dimensions      = dimensions,
+    divisions       = divisions,
+    range           = range,
+    pc.xi           = pc.xi)
 
   return(result)
 }

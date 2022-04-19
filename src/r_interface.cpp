@@ -74,14 +74,19 @@ SEXP r_compute_max_ig(
     const int discretizations = asInteger(Rin_discretizations);
     const int divisions = asInteger(Rin_divisions);
 
-    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
+    const int* decision = nullptr;
+    if (!isNull(Rin_decision)) {
+        decision = INTEGER(Rin_decision);
+    }
 
-    DiscretizationInfo dfi(
+    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), decision);
+
+    std::unique_ptr<const DiscretizationInfo> dfi(new DiscretizationInfo(
         asInteger(Rin_seed),
         discretizations,
         divisions,
         asReal(Rin_range)
-    );
+    ));
 
     MDFSInfo mdfs_info(
         asInteger(Rin_dimensions),
@@ -108,7 +113,103 @@ SEXP r_compute_max_ig(
         mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples), INTEGER(Rout_dids)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
     }
 
-    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, dfi, mdfs_output);
+    if (isNull(Rin_decision)) {
+        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+    } else {
+        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+    }
+
+    mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
+
+    int result_members_count = 1;
+
+    if (return_tuples) {
+        result_members_count += 1; // for tuples
+        result_members_count += 1; // for disc nr
+    }
+
+    SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
+    SET_VECTOR_ELT(Rout_result, 0, Rout_max_igs);
+
+    if (return_tuples) {
+        SET_VECTOR_ELT(Rout_result, 1, Rout_tuples);
+        SET_VECTOR_ELT(Rout_result, 2, Rout_dids);
+    }
+
+    UNPROTECT(1 + result_members_count);
+
+    return Rout_result;
+}
+
+extern "C"
+SEXP r_compute_max_ig_discrete(
+        SEXP Rin_data,
+        SEXP Rin_decision,
+        SEXP Rin_dimensions,
+        SEXP Rin_divisions,
+        SEXP Rin_pseudocount,
+        SEXP Rin_interesting_vars,
+        SEXP Rin_require_all_vars,
+        SEXP Rin_return_tuples,
+        SEXP Rin_return_min,
+        SEXP Rin_use_cuda)
+{
+    #ifndef WITH_CUDA
+    if (asLogical(Rin_use_cuda)) {
+        error("CUDA acceleration not compiled");
+    }
+    #endif
+
+    const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
+
+    const int obj_count = dataDims[0];
+    const int variable_count = dataDims[1];
+
+    #ifdef WITH_CUDA
+    if (asLogical(Rin_use_cuda)) {
+        error("CUDA not supported yet for the discrete variant");
+    }
+    #endif
+
+    const int divisions = asInteger(Rin_divisions);
+
+    const int* decision = nullptr;
+    if (!isNull(Rin_decision)) {
+        decision = INTEGER(Rin_decision);
+    }
+
+    RawData rawdata(RawDataInfo(obj_count, variable_count), INTEGER(Rin_data), decision);
+
+    MDFSInfo mdfs_info(
+        asInteger(Rin_dimensions),
+        divisions,
+        1, // only one discretization
+        asReal(Rin_pseudocount),
+        0.0f,
+        INTEGER(Rin_interesting_vars),
+        length(Rin_interesting_vars),
+        asLogical(Rin_require_all_vars),
+        nullptr
+    );
+
+    SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
+    SEXP Rout_tuples = nullptr;
+    SEXP Rout_dids = nullptr;
+
+    const bool return_tuples = asLogical(Rin_return_tuples);
+    MDFSOutputType out_type = asLogical(Rin_return_min) ? MDFSOutputType::MinIGs : MDFSOutputType::MaxIGs;
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+    if (return_tuples) {
+        Rout_tuples = PROTECT(allocMatrix(INTSXP, mdfs_info.dimensions, variable_count));
+        Rout_dids = PROTECT(allocVector(INTSXP, variable_count));
+        mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples), INTEGER(Rout_dids)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
+    }
+
+    if (isNull(Rin_decision)) {
+        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+    } else {
+        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+    }
 
     mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
 
@@ -156,14 +257,24 @@ SEXP r_compute_all_matching_tuples(
     const int discretizations = asInteger(Rin_discretizations);
     const int divisions = asInteger(Rin_divisions);
 
-    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), INTEGER(Rin_decision));
+    const int* decision = nullptr;
+    if (!isNull(Rin_decision)) {
+        decision = INTEGER(Rin_decision);
+    }
 
-    DiscretizationInfo dfi(
+    RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), decision);
+
+    std::unique_ptr<const DiscretizationInfo> dfi(new DiscretizationInfo(
         asInteger(Rin_seed),
         discretizations,
         divisions,
         asReal(Rin_range)
-    );
+    ));
+
+    const double* I_lower = nullptr;
+    if (!isNull(Rin_I_lower)) {
+        I_lower = REAL(Rin_I_lower);
+    }
 
     MDFSInfo mdfs_info(
         asInteger(Rin_dimensions),
@@ -174,13 +285,105 @@ SEXP r_compute_all_matching_tuples(
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
         asLogical(Rin_require_all_vars),
-        REAL(Rin_I_lower)
+        I_lower
     );
 
-    MDFSOutputType out_type = asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
+    MDFSOutputType out_type = mdfs_info.dimensions == 2 && asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
     MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
 
-    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, dfi, mdfs_output);
+    if (isNull(Rin_decision)) {
+        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+    } else {
+        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+    }
+
+    if (out_type == MDFSOutputType::AllTuples && asLogical(Rin_return_matrix)) {
+        SEXP Rout_result = PROTECT(allocMatrix(REALSXP, variable_count, variable_count));
+
+        // TODO: perhaps we could avoid copying here at all and fill in this matrix already from the mdfs?
+        mdfs_output.copyAllTuplesMatrix(REAL(Rout_result));
+
+        UNPROTECT(1);
+
+        return Rout_result;
+    } else {
+        const int result_members_count = 3;
+        // 2D only now
+        const int tuples_count = out_type == MDFSOutputType::AllTuples ? variable_count * (variable_count - 1) : mdfs_output.getMatchingTuplesCount();
+
+        SEXP Rout_igs = PROTECT(allocVector(REALSXP, tuples_count));
+        SEXP Rout_tuples = PROTECT(allocMatrix(INTSXP, tuples_count, mdfs_info.dimensions));
+        SEXP Rout_vars = PROTECT(allocVector(INTSXP, tuples_count));
+
+        if (out_type == MDFSOutputType::AllTuples) {
+            mdfs_output.copyAllTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));
+        } else {
+            mdfs_output.copyMatchingTuples(INTEGER(Rout_vars), REAL(Rout_igs), INTEGER(Rout_tuples));
+        }
+
+        SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
+        SET_VECTOR_ELT(Rout_result, 0, Rout_vars);
+        SET_VECTOR_ELT(Rout_result, 1, Rout_tuples);
+        SET_VECTOR_ELT(Rout_result, 2, Rout_igs);
+
+        UNPROTECT(1 + result_members_count);
+
+        return Rout_result;
+    }
+}
+
+extern "C"
+SEXP r_compute_all_matching_tuples_discrete(
+        SEXP Rin_data,
+        SEXP Rin_decision,
+        SEXP Rin_dimensions,
+        SEXP Rin_divisions,
+        SEXP Rin_pseudocount,
+        SEXP Rin_interesting_vars,
+        SEXP Rin_require_all_vars,
+        SEXP Rin_ig_thr,
+        SEXP Rin_I_lower,
+        SEXP Rin_return_matrix)
+{
+    const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
+
+    const int obj_count = dataDims[0];
+    const int variable_count = dataDims[1];
+
+    const int divisions = asInteger(Rin_divisions);
+
+    const int* decision = nullptr;
+    if (!isNull(Rin_decision)) {
+        decision = INTEGER(Rin_decision);
+    }
+
+    RawData rawdata(RawDataInfo(obj_count, variable_count), INTEGER(Rin_data), decision);
+
+    const double* I_lower = nullptr;
+    if (!isNull(Rin_I_lower)) {
+        I_lower = REAL(Rin_I_lower);
+    }
+
+    MDFSInfo mdfs_info(
+        asInteger(Rin_dimensions),
+        divisions,
+        1, // only one discretization
+        asReal(Rin_pseudocount),
+        asReal(Rin_ig_thr),
+        INTEGER(Rin_interesting_vars),
+        length(Rin_interesting_vars),
+        asLogical(Rin_require_all_vars),
+        I_lower
+    );
+
+    MDFSOutputType out_type = mdfs_info.dimensions == 2 && asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+
+    if (isNull(Rin_decision)) {
+        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+    } else {
+        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+    }
 
     if (out_type == MDFSOutputType::AllTuples && asLogical(Rin_return_matrix)) {
         SEXP Rout_result = PROTECT(allocMatrix(REALSXP, variable_count, variable_count));

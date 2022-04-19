@@ -15,16 +15,19 @@ public:
 
 class RawData {
 public:
-    RawData(RawDataInfo data_file_info, const double* data, const int* decision)
+    RawData(RawDataInfo data_file_info, const void* data, const int* decision)
         : info(data_file_info), data(data), decision(decision) {}
 
     RawDataInfo info;
-    const double* data;
+    const void* data; // either double or int
     const int* decision;
 
     // returns pointer to array (info.object_count length) with requested variable
     inline const double* getVariable(size_t var_index) const {
-        return this->data + var_index * this->info.object_count;
+        return (const double*) this->data + var_index * this->info.object_count;
+    }
+    inline const int* getVariableI(size_t var_index) const {
+        return (const int*) this->data + var_index * this->info.object_count;
     }
 };
 

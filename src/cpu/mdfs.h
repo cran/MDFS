@@ -10,22 +10,31 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 
-template <uint8_t n_dimensions>
+template <uint8_t n_decision_classes, uint8_t n_dimensions>
 void scalarMDFS(
     const MDFSInfo& mdfs_info,
     RawData* raw_data,
-    const DiscretizationInfo& dfi,
+    std::unique_ptr<const DiscretizationInfo> dfi,
     MDFSOutput& out
 ) {
-    size_t c[2] = {0, 0};
-    uint8_t* decision = new uint8_t[raw_data->info.object_count];
-    for (size_t i = 0; i < raw_data->info.object_count; i++) {
-        decision[i] = raw_data->decision[i];
-        c[decision[i]]++;
+    size_t c[n_decision_classes];
+    for (uint8_t i = 0; i < n_decision_classes; i++) {
+        c[i] = 0;
     }
-    const float cmin = std::min(c[0], c[1]);
+    uint8_t* decision = nullptr;
+    if (n_decision_classes > 1) {
+        decision = new uint8_t[raw_data->info.object_count];
+        for (size_t i = 0; i < raw_data->info.object_count; i++) {
+            decision[i] = raw_data->decision[i];
+            c[decision[i]]++;
+        }
+    } else {
+        c[0] = raw_data->info.object_count;
+    }
+    const float cmin = *std::min_element(c, c+n_decision_classes);
 
     // this is to treat ig_thr=0 and below as unset (ignored) and allow for the
     // numeric errors to pass through the relevance filter (IGs end up being
@@ -40,8 +49,15 @@ void scalarMDFS(
         }
     }
 
-    const float p0 = c[0] / cmin * mdfs_info.pseudo;
-    const float p1 = c[1] / cmin * mdfs_info.pseudo;
+    float* H = nullptr;
+    if (n_decision_classes == 1 && n_dimensions == 2) {
+        H = new float[raw_data->info.variable_count];
+    }
+
+    float p[n_decision_classes];
+    for (uint8_t i = 0; i < n_decision_classes; i++) {
+        p[i] = c[i] / cmin * mdfs_info.pseudo;
+    }
 
     const size_t n_classes = mdfs_info.divisions + 1;
     const size_t num_of_cubes = std::pow(n_classes, n_dimensions);
@@ -52,11 +68,12 @@ void scalarMDFS(
     const auto d4 = d3*n_classes;
     const size_t d[3] = {d2, d3, d4};
 
-    const float H_Y_counters[2] = {
-        c[0] + p0 * num_of_cubes,
-        c[1] + p1 * num_of_cubes,
-    };
-    const float H_Y = entropy(1, H_Y_counters, H_Y_counters+1);
+    float H_Y_counters[n_decision_classes];
+    for (uint8_t i = 0; i < n_decision_classes; i++) {
+        H_Y_counters[i] = c[i] + p[i] * num_of_cubes;
+    }
+    // H(Y) (plain) entropy of decision (computed simply as conditional given an empty set of vars)
+    const float H_Y = conditional_entropy<n_decision_classes>(1, H_Y_counters);
 
     const size_t n_vars_to_discretize = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
                                         mdfs_info.interesting_vars_count :
@@ -66,6 +83,9 @@ void scalarMDFS(
         // we will be doing overall max on discretizations
         std::fill(out.max_igs->begin(), out.max_igs->end(), -std::numeric_limits<float>::infinity());
     }
+
+    // total of all counters; used only in no decision mode
+    const float total_counters = raw_data->info.object_count + p[0] * num_of_cubes;
 
     for (size_t discretization_id = 0; discretization_id < mdfs_info.discretizations; discretization_id++) {
         TupleGenerator* generator;
@@ -78,26 +98,52 @@ void scalarMDFS(
 
         uint8_t* data = new uint8_t[raw_data->info.object_count * raw_data->info.variable_count];
 
-        for (size_t i = 0; i < n_vars_to_discretize; ++i) {
-            const size_t v = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
-                             mdfs_info.interesting_vars[i] :
-                             i;
-            const double* in_data = raw_data->getVariable(v);
+        if (dfi) {
+            for (size_t i = 0; i < n_vars_to_discretize; ++i) {
+                const size_t v = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
+                                 mdfs_info.interesting_vars[i] :
+                                 i;
+                const double* in_data = raw_data->getVariable(v);
 
-            std::vector<double> sorted_in_data(in_data, in_data + raw_data->info.object_count);
-            std::sort(sorted_in_data.begin(), sorted_in_data.end());
+                std::vector<double> sorted_in_data(in_data, in_data + raw_data->info.object_count);
+                std::sort(sorted_in_data.begin(), sorted_in_data.end());
 
-            discretize(
-                dfi.seed,
-                discretization_id,
-                v,
-                dfi.divisions,
-                raw_data->info.object_count,
-                in_data,
-                sorted_in_data,
-                data + v * raw_data->info.object_count,
-                dfi.range
-            );
+                discretize(
+                    dfi->seed,
+                    discretization_id,
+                    v,
+                    dfi->divisions,
+                    raw_data->info.object_count,
+                    in_data,
+                    sorted_in_data,
+                    data + v * raw_data->info.object_count,
+                    dfi->range
+                );
+            }
+        } else {
+            // rewrite int to uint8_t
+            for (size_t i = 0; i < n_vars_to_discretize; ++i) {
+                const size_t v = mdfs_info.interesting_vars_count && mdfs_info.require_all_vars ?
+                                 mdfs_info.interesting_vars[i] :
+                                 i;
+                const int* in_data = raw_data->getVariableI(v);
+                uint8_t* data_current_var = data + v * raw_data->info.object_count;
+
+                for (size_t i = 0; i < raw_data->info.object_count; i++) {
+                    data_current_var[i] = in_data[i];
+                }
+            }
+        }
+
+        if (H != nullptr) {
+            float* mini_counters = new float[n_classes];
+            float p_local = p[0] * num_of_cubes_reduced;  // to match counting in higher dimensions
+            for (size_t i = 0; i < raw_data->info.variable_count; i++) {
+                count_counters<1, 1>(data, nullptr, raw_data->info.object_count, 0, &i, mini_counters, n_classes, &p_local, nullptr);
+                // H(X_k) (plain) entropy of the current var
+                H[i] = entropy(total_counters, n_classes, mini_counters);
+            }
+            delete[] mini_counters;
         }
 
         MDFSOutput* local_mdfs_output = nullptr;
@@ -114,8 +160,8 @@ void scalarMDFS(
         {
             size_t* tuple = new size_t[n_dimensions];
             float* igs = new float[n_dimensions];
-            float* counters = new float[2 * num_of_cubes];
-            float* reduced = new float[2 * num_of_cubes_reduced];
+            float* counters = new float[n_decision_classes * num_of_cubes];
+            float* reduced = new float[n_decision_classes * num_of_cubes_reduced];
 
             bool hasWorkToDo = true;
 
@@ -150,7 +196,7 @@ void scalarMDFS(
 
                 if (n_dimensions >= 2) {
                     if (I_lower == nullptr) {
-                        process_tuple<n_dimensions>(
+                        process_tuple<n_decision_classes, n_dimensions>(
                             data,
                             decision,
                             raw_data->info.object_count,
@@ -158,13 +204,15 @@ void scalarMDFS(
                             tuple,
                             counters, reduced,
                             num_of_cubes, num_of_cubes_reduced,
-                            p0, p1,
+                            p,
+                            total_counters,
                             d,
+                            H,
                             igs,
                             nullptr);
                     } else {
-                        // FIXME: so far only 2D supported
-                        process_tuple_incremental<n_dimensions>(
+                        // TODO: so far only 2D supported
+                        process_tuple_incremental<n_decision_classes, n_dimensions>(
                             data,
                             decision,
                             raw_data->info.object_count,
@@ -172,7 +220,8 @@ void scalarMDFS(
                             tuple,
                             counters,
                             num_of_cubes,
-                            p0, p1,
+                            p,
+                            total_counters,
                             d,
                             H_Y,
                             I_lower,
@@ -180,7 +229,7 @@ void scalarMDFS(
                             nullptr);
                     }
                 } else {  // 1D
-                    process_tuple_incremental<n_dimensions>(
+                    process_tuple_incremental<n_decision_classes, n_dimensions>(
                         data,
                         decision,
                         raw_data->info.object_count,
@@ -188,7 +237,8 @@ void scalarMDFS(
                         tuple,
                         counters,
                         num_of_cubes,
-                        p0, p1,
+                        p,
+                        total_counters,
                         d,
                         H_Y,
                         nullptr,
@@ -252,6 +302,9 @@ void scalarMDFS(
         delete generator;
     }
 
+    if (H != nullptr) {
+        delete[] H;
+    }
     if (I_lower != nullptr) {
         delete[] I_lower;
     }
@@ -261,16 +314,24 @@ void scalarMDFS(
 typedef void (*MdfsImpl) (
     const MDFSInfo& mdfs_info,
     RawData* raw_data,
-    const DiscretizationInfo& dfi,
+    std::unique_ptr<const DiscretizationInfo> dfi,
     MDFSOutput& out
 );
 
 const MdfsImpl mdfs[] = {
-    scalarMDFS<1>,
-    scalarMDFS<2>,
-    scalarMDFS<3>,
-    scalarMDFS<4>,
-    scalarMDFS<5>
+    scalarMDFS<2, 1>,
+    scalarMDFS<2, 2>,
+    scalarMDFS<2, 3>,
+    scalarMDFS<2, 4>,
+    scalarMDFS<2, 5>
+};
+
+const MdfsImpl mdfsNoDecision[] = {
+    scalarMDFS<1, 1>,
+    scalarMDFS<1, 2>,
+    scalarMDFS<1, 3>,
+    scalarMDFS<1, 4>,
+    scalarMDFS<1, 5>
 };
 
 #endif
