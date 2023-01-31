@@ -1,8 +1,4 @@
 prepare_decision <- function(decision) {
-  if (is.null(decision)) {
-    return(NULL)
-  }
-
   if (!is.vector(decision) && !is.factor(decision)) {
     stop("Decision must be a vector, a list or a factor.")
   }

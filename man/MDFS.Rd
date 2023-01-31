@@ -7,9 +7,9 @@
 MDFS(
   data,
   decision,
-  n.contrast = max(ncol(data)/10, 30),
+  n.contrast = max(ncol(data), 30),
   dimensions = 1,
-  divisions = NULL,
+  divisions = 1,
   discretizations = 1,
   range = NULL,
   pc.xi = 0.25,
@@ -28,7 +28,7 @@ MDFS(
 
 \item{dimensions}{number of dimensions (a positive integer; on CUDA limited to 2--5 range)}
 
-\item{divisions}{number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)}
+\item{divisions}{number of divisions (from 1 to 15)}
 
 \item{discretizations}{number of discretizations}
 

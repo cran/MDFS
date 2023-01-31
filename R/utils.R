@@ -1,4 +1,14 @@
-GetRange <- function(k = 5, n, dimensions, divisions) {
+#' Get the recommended range for multiple discretisations
+#'
+#' @param k the assumed minimum number of objects in a bucket (the default is the recommended value)
+#' @param n the number of objects in the least numerous class
+#' @param dimensions the number of dimensions of analysis
+#' @param divisions the number of divisions of discretisations
+#' @return The recommended range value (a floating point number).
+#' @examples
+#' GetRange(n = 250, dimensions = 2)
+#' @export
+GetRange <- function(k = 5, n, dimensions, divisions = 1) {
   ksi <- (k / n) ^ (1 / dimensions)
   suggested.range <- (1 - ksi * (1 + divisions)) / (1 - ksi * (1 - divisions))
   range <- max(0, min(suggested.range, 1))
@@ -11,7 +21,7 @@ GetRange <- function(k = 5, n, dimensions, divisions) {
   range
 }
 
-#' Add contrast variables to data
+#' Generate contrast variables from data
 #'
 #' @param data data organized in matrix with separate variables in columns
 #' @param n.contrast number of constrast variables (defaults to max of 1/10 of variables number and 30)
@@ -22,11 +32,36 @@ GetRange <- function(k = 5, n, dimensions, divisions) {
 #'   \item \code{mask} -- vector of booleans making it easy to select just contrast variables
 #'  }
 #' @examples
-#' AddContrastVariables(madelon$data)
+#' GenContrastVariables(madelon$data)
+#' @export
+GenContrastVariables <- function(
+    data,
+    n.contrast = max(ncol(data), 30)) {
+  if (is.null(ncol(data))) {
+    stop("Data has to have columns")
+  }
+  indices <- sample.int(ncol(data), n.contrast, replace = n.contrast > ncol(data))
+  contrast_data <- apply(data[, indices], 2, sample)
+  list(indices = indices, contrast_data = contrast_data)
+}
+
+#' Add contrast variables to data
+#'
+#' This function is deprecated. Please use GenContrastVariables instead.
+#'
+#' @param data data organized in matrix with separate variables in columns
+#' @param n.contrast number of constrast variables (defaults to max of 1/10 of variables number and 30)
+#' @return A list with the following key names:
+#'  \itemize{
+#'   \item \code{indices} -- vector of indices of input variables used to construct contrast variables
+#'   \item \code{x} -- data with constrast variables appended to it
+#'   \item \code{mask} -- vector of booleans making it easy to select just contrast variables
+#'  }
 #' @export
 AddContrastVariables <- function(
     data,
     n.contrast = max(ncol(data) / 10, 30)) {
+  .Deprecated("GenContrastVariables")
   if (is.null(ncol(data))) {
     stop("Data has to have columns")
   }

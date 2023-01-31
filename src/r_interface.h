@@ -3,6 +3,7 @@
 extern "C"
 SEXP r_compute_max_ig(
 	SEXP Rin_data,
+	SEXP Rin_contrast_data,
 	SEXP Rin_decision,
 	SEXP Rin_dimensions,
 	SEXP Rin_divisions,
@@ -13,13 +14,13 @@ SEXP r_compute_max_ig(
 	SEXP Rin_interesting_vars,
 	SEXP Rin_require_all_vars,
 	SEXP Rin_return_tuples,
-	SEXP Rin_return_min,
 	SEXP Rin_use_cuda
 );
 
 extern "C"
 SEXP r_compute_max_ig_discrete(
 	SEXP Rin_data,
+	SEXP Rin_contrast_data,
 	SEXP Rin_decision,
 	SEXP Rin_dimensions,
 	SEXP Rin_divisions,
@@ -27,7 +28,6 @@ SEXP r_compute_max_ig_discrete(
 	SEXP Rin_interesting_vars,
 	SEXP Rin_require_all_vars,
 	SEXP Rin_return_tuples,
-	SEXP Rin_return_min,
 	SEXP Rin_use_cuda
 );
 
@@ -45,7 +45,9 @@ SEXP r_compute_all_matching_tuples(
 	SEXP Rin_require_all_vars,
 	SEXP Rin_ig_thr,
 	SEXP Rin_I_lower,
-	SEXP Rin_return_matrix
+	SEXP Rin_return_matrix,
+	SEXP Rin_stat_mode,
+	SEXP Rin_average
 );
 
 extern "C"
@@ -59,7 +61,8 @@ SEXP r_compute_all_matching_tuples_discrete(
 	SEXP Rin_require_all_vars,
 	SEXP Rin_ig_thr,
 	SEXP Rin_I_lower,
-	SEXP Rin_return_matrix
+	SEXP Rin_return_matrix,
+	SEXP Rin_stat_mode
 );
 
 extern "C"

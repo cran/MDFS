@@ -1,6 +1,7 @@
-#include "r_interface.h"
-
+// needs to go first to avoid omp.h conflicts with Rinternals.h macros
 #include "cpu/mdfs.h"
+
+#include "r_interface.h"
 
 #ifdef WITH_CUDA
 // <R.h> required to report errors - currently only CUDA reports any errors
@@ -11,6 +12,7 @@
 extern "C"
 SEXP r_compute_max_ig(
         SEXP Rin_data,
+        SEXP Rin_contrast_data,
         SEXP Rin_decision,
         SEXP Rin_dimensions,
         SEXP Rin_divisions,
@@ -21,7 +23,6 @@ SEXP r_compute_max_ig(
         SEXP Rin_interesting_vars,
         SEXP Rin_require_all_vars,
         SEXP Rin_return_tuples,
-        SEXP Rin_return_min,
         SEXP Rin_use_cuda)
 {
     #ifndef WITH_CUDA
@@ -31,9 +32,17 @@ SEXP r_compute_max_ig(
     #endif
 
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
+    int* contrastDataDims = nullptr;
+    if (!isNull(Rin_contrast_data)) {
+        contrastDataDims = INTEGER(getAttrib(Rin_contrast_data, R_DimSymbol));
+    }
 
     const int obj_count = dataDims[0];
     const int variable_count = dataDims[1];
+    int contrast_variable_count = 0;
+    if (!isNull(Rin_contrast_data)) {
+        contrast_variable_count = contrastDataDims[1];
+    }
 
     #ifdef WITH_CUDA
     if (asLogical(Rin_use_cuda)) {
@@ -74,12 +83,13 @@ SEXP r_compute_max_ig(
     const int discretizations = asInteger(Rin_discretizations);
     const int divisions = asInteger(Rin_divisions);
 
-    const int* decision = nullptr;
-    if (!isNull(Rin_decision)) {
-        decision = INTEGER(Rin_decision);
-    }
+    const int* decision = INTEGER(Rin_decision);
 
     RawData rawdata(RawDataInfo(obj_count, variable_count), REAL(Rin_data), decision);
+    RawData* contrast_rawdata = nullptr;
+    if (!isNull(Rin_contrast_data)) {
+        contrast_rawdata = new RawData(RawDataInfo(obj_count, contrast_variable_count), REAL(Rin_contrast_data), nullptr);
+    }
 
     std::unique_ptr<const DiscretizationInfo> dfi(new DiscretizationInfo(
         asInteger(Rin_seed),
@@ -97,27 +107,28 @@ SEXP r_compute_max_ig(
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
         asLogical(Rin_require_all_vars),
-        nullptr
+        nullptr,
+        false
     );
 
     SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
+    SEXP Rout_contrast_max_igs = nullptr;
     SEXP Rout_tuples = nullptr;
     SEXP Rout_dids = nullptr;
 
+    if (!isNull(Rin_contrast_data)) {
+        Rout_contrast_max_igs = PROTECT(allocVector(REALSXP, contrast_variable_count));
+    }
+
     const bool return_tuples = asLogical(Rin_return_tuples);
-    MDFSOutputType out_type = asLogical(Rin_return_min) ? MDFSOutputType::MinIGs : MDFSOutputType::MaxIGs;
-    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+    MDFSOutput mdfs_output(MDFSOutputType::MaxIGs, mdfs_info.dimensions, variable_count, contrast_variable_count);
     if (return_tuples) {
         Rout_tuples = PROTECT(allocMatrix(INTSXP, mdfs_info.dimensions, variable_count));
         Rout_dids = PROTECT(allocVector(INTSXP, variable_count));
         mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples), INTEGER(Rout_dids)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
     }
 
-    if (isNull(Rin_decision)) {
-        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
-    } else {
-        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
-    }
+    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, contrast_rawdata, std::move(dfi), mdfs_output);
 
     mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
 
@@ -128,6 +139,11 @@ SEXP r_compute_max_ig(
         result_members_count += 1; // for disc nr
     }
 
+    if (!isNull(Rin_contrast_data)) {
+        mdfs_output.copyContrastMaxIGsAsDouble(REAL(Rout_contrast_max_igs));
+        result_members_count += 1;
+    }
+
     SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
     SET_VECTOR_ELT(Rout_result, 0, Rout_max_igs);
 
@@ -136,7 +152,19 @@ SEXP r_compute_max_ig(
         SET_VECTOR_ELT(Rout_result, 2, Rout_dids);
     }
 
+    if (!isNull(Rin_contrast_data)) {
+        if (return_tuples) {
+            SET_VECTOR_ELT(Rout_result, 3, Rout_contrast_max_igs);
+        } else {
+            SET_VECTOR_ELT(Rout_result, 1, Rout_contrast_max_igs);
+        }
+    }
+
     UNPROTECT(1 + result_members_count);
+
+    if (!isNull(Rin_contrast_data)) {
+        delete contrast_rawdata;
+    }
 
     return Rout_result;
 }
@@ -144,6 +172,7 @@ SEXP r_compute_max_ig(
 extern "C"
 SEXP r_compute_max_ig_discrete(
         SEXP Rin_data,
+        SEXP Rin_contrast_data,
         SEXP Rin_decision,
         SEXP Rin_dimensions,
         SEXP Rin_divisions,
@@ -151,7 +180,6 @@ SEXP r_compute_max_ig_discrete(
         SEXP Rin_interesting_vars,
         SEXP Rin_require_all_vars,
         SEXP Rin_return_tuples,
-        SEXP Rin_return_min,
         SEXP Rin_use_cuda)
 {
     #ifndef WITH_CUDA
@@ -161,9 +189,17 @@ SEXP r_compute_max_ig_discrete(
     #endif
 
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
+    int* contrastDataDims = nullptr;
+    if (!isNull(Rin_contrast_data)) {
+        contrastDataDims = INTEGER(getAttrib(Rin_contrast_data, R_DimSymbol));
+    }
 
     const int obj_count = dataDims[0];
     const int variable_count = dataDims[1];
+    int contrast_variable_count = 0;
+    if (!isNull(Rin_contrast_data)) {
+        contrast_variable_count = contrastDataDims[1];
+    }
 
     #ifdef WITH_CUDA
     if (asLogical(Rin_use_cuda)) {
@@ -173,12 +209,13 @@ SEXP r_compute_max_ig_discrete(
 
     const int divisions = asInteger(Rin_divisions);
 
-    const int* decision = nullptr;
-    if (!isNull(Rin_decision)) {
-        decision = INTEGER(Rin_decision);
-    }
+    const int* decision = INTEGER(Rin_decision);
 
     RawData rawdata(RawDataInfo(obj_count, variable_count), INTEGER(Rin_data), decision);
+    RawData* contrast_rawdata = nullptr;
+    if (!isNull(Rin_contrast_data)) {
+        contrast_rawdata = new RawData(RawDataInfo(obj_count, contrast_variable_count), INTEGER(Rin_contrast_data), nullptr);
+    }
 
     MDFSInfo mdfs_info(
         asInteger(Rin_dimensions),
@@ -189,27 +226,28 @@ SEXP r_compute_max_ig_discrete(
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
         asLogical(Rin_require_all_vars),
-        nullptr
+        nullptr,
+        false
     );
 
     SEXP Rout_max_igs = PROTECT(allocVector(REALSXP, variable_count));
+    SEXP Rout_contrast_max_igs = nullptr;
     SEXP Rout_tuples = nullptr;
     SEXP Rout_dids = nullptr;
 
+    if (!isNull(Rin_contrast_data)) {
+        Rout_contrast_max_igs = PROTECT(allocVector(REALSXP, contrast_variable_count));
+    }
+
     const bool return_tuples = asLogical(Rin_return_tuples);
-    MDFSOutputType out_type = asLogical(Rin_return_min) ? MDFSOutputType::MinIGs : MDFSOutputType::MaxIGs;
-    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+    MDFSOutput mdfs_output(MDFSOutputType::MaxIGs, mdfs_info.dimensions, variable_count, contrast_variable_count);
     if (return_tuples) {
         Rout_tuples = PROTECT(allocMatrix(INTSXP, mdfs_info.dimensions, variable_count));
         Rout_dids = PROTECT(allocVector(INTSXP, variable_count));
         mdfs_output.setMaxIGsTuples(INTEGER(Rout_tuples), INTEGER(Rout_dids)); // tuples are set row-first during computation, we transpose the result in R to speed up C code
     }
 
-    if (isNull(Rin_decision)) {
-        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
-    } else {
-        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
-    }
+    mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, contrast_rawdata, nullptr, mdfs_output);
 
     mdfs_output.copyMaxIGsAsDouble(REAL(Rout_max_igs));
 
@@ -220,6 +258,11 @@ SEXP r_compute_max_ig_discrete(
         result_members_count += 1; // for disc nr
     }
 
+    if (!isNull(Rin_contrast_data)) {
+        mdfs_output.copyContrastMaxIGsAsDouble(REAL(Rout_contrast_max_igs));
+        result_members_count += 1;
+    }
+
     SEXP Rout_result = PROTECT(allocVector(VECSXP, result_members_count));
     SET_VECTOR_ELT(Rout_result, 0, Rout_max_igs);
 
@@ -228,7 +271,19 @@ SEXP r_compute_max_ig_discrete(
         SET_VECTOR_ELT(Rout_result, 2, Rout_dids);
     }
 
+    if (!isNull(Rin_contrast_data)) {
+        if (return_tuples) {
+            SET_VECTOR_ELT(Rout_result, 3, Rout_contrast_max_igs);
+        } else {
+            SET_VECTOR_ELT(Rout_result, 1, Rout_contrast_max_igs);
+        }
+    }
+
     UNPROTECT(1 + result_members_count);
+
+    if (!isNull(Rin_contrast_data)) {
+        delete contrast_rawdata;
+    }
 
     return Rout_result;
 }
@@ -247,7 +302,9 @@ SEXP r_compute_all_matching_tuples(
         SEXP Rin_require_all_vars,
         SEXP Rin_ig_thr,
         SEXP Rin_I_lower,
-        SEXP Rin_return_matrix)
+        SEXP Rin_return_matrix,
+        SEXP Rin_stat_mode,
+        SEXP Rin_average)
 {
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
 
@@ -285,16 +342,33 @@ SEXP r_compute_all_matching_tuples(
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
         asLogical(Rin_require_all_vars),
-        I_lower
+        I_lower,
+        asLogical(Rin_average)
     );
 
     MDFSOutputType out_type = mdfs_info.dimensions == 2 && asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
-    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count, 0);
 
     if (isNull(Rin_decision)) {
-        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+        switch (asInteger(Rin_stat_mode)) {
+            case 1: mdfsEntropy[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            case 2: mdfsMutualInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            case 3: mdfsVariationOfInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            default: error("Unknown statistic");
+        }
     } else {
-        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, std::move(dfi), mdfs_output);
+        switch (asInteger(Rin_stat_mode)) {
+            case 1: mdfsDecisionConditionalEntropy[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            case 2: mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            case 3: mdfsDecisionConditionalVariationOfInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, std::move(dfi), mdfs_output);
+            break;
+            default: error("Unknown statistic");
+        }
     }
 
     if (out_type == MDFSOutputType::AllTuples && asLogical(Rin_return_matrix)) {
@@ -343,7 +417,8 @@ SEXP r_compute_all_matching_tuples_discrete(
         SEXP Rin_require_all_vars,
         SEXP Rin_ig_thr,
         SEXP Rin_I_lower,
-        SEXP Rin_return_matrix)
+        SEXP Rin_return_matrix,
+        SEXP Rin_stat_mode)
 {
     const int* dataDims = INTEGER(getAttrib(Rin_data, R_DimSymbol));
 
@@ -373,16 +448,33 @@ SEXP r_compute_all_matching_tuples_discrete(
         INTEGER(Rin_interesting_vars),
         length(Rin_interesting_vars),
         asLogical(Rin_require_all_vars),
-        I_lower
+        I_lower,
+        false
     );
 
     MDFSOutputType out_type = mdfs_info.dimensions == 2 && asReal(Rin_ig_thr) <= 0.0 && length(Rin_interesting_vars) == 0 ? MDFSOutputType::AllTuples : MDFSOutputType::MatchingTuples;
-    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count);
+    MDFSOutput mdfs_output(out_type, mdfs_info.dimensions, variable_count, 0);
 
     if (isNull(Rin_decision)) {
-        mdfsNoDecision[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+        switch (asInteger(Rin_stat_mode)) {
+            case 1: mdfsEntropy[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            case 2: mdfsMutualInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            case 3: mdfsVariationOfInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            default: error("Unknown statistic");
+        }
     } else {
-        mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, mdfs_output);
+        switch (asInteger(Rin_stat_mode)) {
+            case 1: mdfsDecisionConditionalEntropy[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            case 2: mdfs[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            case 3: mdfsDecisionConditionalVariationOfInformation[asInteger(Rin_dimensions)-1](mdfs_info, &rawdata, nullptr, nullptr, mdfs_output);
+            break;
+            default: error("Unknown statistic");
+        }
     }
 
     if (out_type == MDFSOutputType::AllTuples && asLogical(Rin_return_matrix)) {

@@ -55,7 +55,6 @@ ComputePValue <- function(
 ) {
   #check the reasonability of input
   ll<-ifelse(is.null(contrast.mask), length(IG), length(IG[contrast.mask]))
-  ic<-ifelse(is.null(contrast.mask), IG, IG[contrast.mask])
 
   if (length(IG)<4 || sum(is.na(as.numeric(IG)))>0 || sum(!is.numeric(IG))>0) {
    stop('IG has to be a numeric vector of length above 3, without N/A values')
@@ -138,14 +137,12 @@ ComputePValue <- function(
 
   #order variables
   order.IG<-order(IG.original)
-  IG.ordered<-IG[order.IG]
 
   #degrees of freedom - if not specified by the user
   if (is.null(df)) df<-response.divisions*divisions*(divisions+1)^(dimensions-1)
 
   #compute p-values
   chisq<-pchisq(IG,df,lower.tail=FALSE)
-  chisq.lower<-pchisq(IG,df,lower.tail=TRUE)
   chisq.log<-pchisq(IG,df,log.p=TRUE)
 
   #if there are contrast variables, use them to compute the parameter; otherwise use all the variables
@@ -153,46 +150,39 @@ ComputePValue <- function(
     IG.contrast<-IG[contrast.mask]
     order.IG.contrast<-order(IG.contrast)
     chisq.contrast<-(chisq[contrast.mask])[order.IG.contrast]
-    chisq.lower.contrast<-(chisq.lower[contrast.mask])[order.IG.contrast]
-    chisq.log.contrast<-(chisq.log[contrast.mask])[order.IG.contrast]
   } else {
     IG.contrast<-IG
     order.IG.contrast<-order.IG
     chisq.contrast<-chisq[order.IG]
-    chisq.lower.contrast<-chisq.lower[order.IG]
-    chisq.log.contrast<-chisq.log[order.IG]
   }
 
   n.var<-length(IG.contrast)
 
   #weights and index
-  k<-K<-1:n.var
-  v<-V<-chisq.contrast[K]
+  K<-1:n.var
+  V<-chisq.contrast[K]
   if (dimensions>1 || one.dim.mode=="exp") {
-    l<-L<-log(K)
-    w<-W<-K/(n.var-K+1)
+    L<-log(K)
+    W<-K/(n.var-K+1)
   } else {
-    l<-L<-K
-    w<-W<-1/K/(n.var-K+1)
+    L<-K
+    W<-1/K/(n.var-K+1)
   }
   #cumulative sums overall
-  sw<-Sw<-cumsum(W)
-  sv<-Sv<-cumsum(V)
-  swv<-Swv<-cumsum(W*V)
-  swv2<-Swv2<-cumsum(W*V^2)
-  swl<-Swl<-cumsum(W*L)
-  swl2<-Swl2<-cumsum(W*L^2)
-  swlv<-Swlv<-cumsum(W*L*V)
-  slt<-Slt<-cumsum(W*chisq.lower.contrast^2)
-  srt<-Srt<-cumsum(W[n.var:1]*(chisq.contrast[n.var:1])^2)[n.var:1]
+  Sw<-cumsum(W)
+  Sv<-cumsum(V)
+  Swv<-cumsum(W*V)
+  Swv2<-cumsum(W*V^2)
+  Swl<-cumsum(W*L)
+  Swl2<-cumsum(W*L^2)
+  Swlv<-cumsum(W*L*V)
+  Srt<-cumsum(W[n.var:1]*(chisq.contrast[n.var:1])^2)[n.var:1]
 
   #fit the distribution parameter
   calc.S<-function(n0i) {
     npt<-n.var-n0i+1
     k<-K[1:npt]
     l<-L[1:npt]
-    w<-W[n0i:n.var]
-    v<-V[n0i:n.var]
     sw<-Sw[n0i:n.var]-c(0,Sw)[n0i]
     sv<-Sv[n0i:n.var]-c(0,Sv)[n0i]
     swv<-Swv[n0i:n.var]-c(0,Swv)[n0i]
@@ -200,7 +190,6 @@ ComputePValue <- function(
     swl<-Swl[n0i:n.var]-c(0,Swl)[n0i]
     swl2<-Swl2[n0i:n.var]-c(0,Swl2)[n0i]
     swlv<-Swlv[n0i:n.var]-c(0,Swlv)[n0i]
-    slt<-Slt[n0i:n.var]-c(0,Slt)[n0i]
     srt<-Srt[n0i:n.var]
 
     if (dimensions>1 || one.dim.mode=="exp") {
@@ -279,7 +268,6 @@ ComputePValue <- function(
   if (!is.null(contrast.mask)) { p.test<-p.values[contrast.mask] } else p.test<-p.values
   p.test<-rev(p.test[order(p.test,decreasing=T)][n0:(n0+nv)])
   pv.fit<-suppressWarnings(ks.test(p.test,'punif'))$p.value
-  if (pv.fit<level) {warning("Poor goodness of fit for the distribution")}
 
   result <- data.frame(
     IG = IG.original,

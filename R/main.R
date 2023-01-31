@@ -8,7 +8,7 @@
 #' @param decision decision variable as a boolean vector of length equal to number of observations
 #' @param n.contrast number of constrast variables (defaults to max of 1/10 of variables number and 30)
 #' @param dimensions number of dimensions (a positive integer; on CUDA limited to 2--5 range)
-#' @param divisions number of divisions (from 1 to 15; \code{NULL} selects probable optimal number)
+#' @param divisions number of divisions (from 1 to 15)
 #' @param discretizations number of discretizations
 #' @param range discretization range (from 0.0 to 1.0; \code{NULL} selects probable optimal number)
 #' @param pc.xi parameter xi used to compute pseudocounts (the default is recommended not to be changed)
@@ -37,9 +37,9 @@
 MDFS <- function(
   data,
   decision,
-  n.contrast = max(ncol(data)/10, 30),
+  n.contrast = max(ncol(data), 30),
   dimensions = 1,
-  divisions = NULL,
+  divisions = 1,
   discretizations = 1,
   range = NULL,
   pc.xi = 0.25,
@@ -50,36 +50,34 @@ MDFS <- function(
  ) {
  if(!is.null(seed)) {set.seed(seed)}
  if (n.contrast>0) {
-  contrast<-AddContrastVariables(data, n.contrast)
-  contrast.indices<-contrast$indices
-  contrast.variables<-contrast$x[,contrast$mask]
-  data.contrast<-contrast$x
-  contrast.mask<-contrast$mask
+  contrast <- GenContrastVariables(data, n.contrast)
+  contrast.indices <- contrast$indices
+  contrast_data <- contrast$contrast_data
+  contrast.mask <- c(rep.int(F, ncol(data)), rep.int(T, ncol(contrast_data)))
  } else {
-  contrast.mask<-contrast.indices<-contrast.variables<-NULL
-  data.contrast<-data
+  contrast.mask <- contrast.indices <- contrast_data <- NULL
  }
 
- MIG.Result <- ComputeMaxInfoGains(data.contrast, decision,
+ MIG.Result <- ComputeMaxInfoGains(data, decision,
+  contrast_data = contrast_data,
   dimensions = dimensions, divisions = divisions,
   discretizations = discretizations, range = range, pc.xi = pc.xi,
   seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
+ igs <- c(MIG.Result$IG, attr(MIG.Result, "contrast_igs"))
 
- divisions <- attr(MIG.Result, "run.params")$divisions
-
- fs <- ComputePValue(MIG.Result$IG,
+ fs <- ComputePValue(igs,
   dimensions = dimensions, divisions = divisions,
   contrast.mask = contrast.mask,
   one.dim.mode = ifelse (discretizations==1, "raw", ifelse(divisions*discretizations<12, "lin", "exp")))
 
- statistic <- if(is.null(contrast.mask)) { MIG.Result$IG } else { MIG.Result$IG[!contrast.mask] }
- p.value <- if(is.null(contrast.mask)) { fs$p.value } else { fs$p.value[!contrast.mask] }
+ statistic <- MIG.Result$IG
+ p.value <- fs$p.value[seq_len(ncol(data))]
  adjusted.p.value <- p.adjust(p.value, method=p.adjust.method)
  relevant.variables <- which(adjusted.p.value<level)
 
  return(list(
   contrast.indices = contrast.indices,
-  contrast.variables = contrast.variables,
+  contrast.variables = contrast_data,
   MIG.Result = MIG.Result,
   MDFS = fs,
   statistic = statistic,

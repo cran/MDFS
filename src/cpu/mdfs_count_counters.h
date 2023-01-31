@@ -7,14 +7,16 @@
 
 
 // only 1 and 2 decision classes are supported
-template <uint8_t n_decision_classes, uint8_t n_dimensions>
+template <uint8_t n_decision_classes, uint8_t n_dimensions, bool with_contrast>
 inline void count_counters(
     const uint8_t *data,
+    const uint8_t *contrast_data,
     const uint8_t *decision,
     const size_t n_objects,
     const size_t n_classes,
 
     const size_t* tuple,
+    const size_t contrast_idx,
 
     float* counters,
     const size_t n_cubes,
@@ -25,7 +27,10 @@ inline void count_counters(
     std::memset(counters, 0, sizeof(float) * n_cubes * n_decision_classes);
 
     for (size_t o = 0; o < n_objects; ++o) {
-        size_t bucket = data[tuple[0] * n_objects + o];
+        size_t bucket = 0;
+        if (n_dimensions >= 1) {
+            bucket += data[tuple[0] * n_objects + o];
+        }
         if (n_dimensions >= 2) {
             bucket += n_classes * data[tuple[1] * n_objects + o];
         }
@@ -37,6 +42,15 @@ inline void count_counters(
         }
         if (n_dimensions >= 5) {
             bucket += d[2] * data[tuple[4] * n_objects + o];
+        }
+        if (with_contrast) {
+            if (n_dimensions == 0) {
+                bucket += contrast_data[contrast_idx * n_objects + o];
+            } else if (n_dimensions == 1) {
+                bucket += n_classes * contrast_data[contrast_idx * n_objects + o];
+            } else {
+                bucket += d[n_dimensions-2] * contrast_data[contrast_idx * n_objects + o];
+            }
         }
 
         if (n_decision_classes > 1) {

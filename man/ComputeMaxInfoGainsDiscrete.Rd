@@ -6,11 +6,11 @@
 \usage{
 ComputeMaxInfoGainsDiscrete(
   data,
-  decision = NULL,
+  decision,
+  contrast_data = NULL,
   dimensions = 1,
   pc.xi = 0.25,
   return.tuples = FALSE,
-  return.min = FALSE,
   interesting.vars = vector(mode = "integer"),
   require.all.vars = FALSE
 )
@@ -20,13 +20,13 @@ ComputeMaxInfoGainsDiscrete(
 
 \item{decision}{decision variable as a binary sequence of length equal to number of observations}
 
+\item{contrast_data}{the contrast counterpart of data, has to have the same number of observations}
+
 \item{dimensions}{number of dimensions (a positive integer; 5 max)}
 
 \item{pc.xi}{parameter xi used to compute pseudocounts (the default is recommended not to be changed)}
 
 \item{return.tuples}{whether to return tuples where max IG was observed (one tuple per variable) - not supported with CUDA nor in 1D}
-
-\item{return.min}{whether to return min instead of max (per tuple) - not supported with CUDA}
 
 \item{interesting.vars}{variables for which to check the IGs (none = all) - not supported with CUDA}
 
@@ -44,12 +44,6 @@ A \code{\link{data.frame}} with the following columns:
 }
 \description{
 Max information gains (discrete)
-}
-\details{
-If \code{decision} is omitted, this function calculates either the variable entropy
-(in 1D) or mutual information (in higher dimensions).
-Translate "IG" respectively to entropy or mutual information in the
-rest of this function's description.
 }
 \examples{
 \donttest{
