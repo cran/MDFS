@@ -1,13 +1,13 @@
-a5a25008c1014d5b186d4d437b315deb *DESCRIPTION
+b7832427bbc63facb2cad79ea7d16624 *DESCRIPTION
 5a4e624ea3d84f8e2242468fe1925b7e *NAMESPACE
-6706b56c6c8fcdf524b87147b96074fe *NEWS
+a40c00feca063154dc7859bad593dc24 *NEWS
 2c10bcf5139345dc16e0eaf4153ce26c *R/data.R
-78ef861c2a8768ee23c004c811fd0036 *R/information_gain.R
+db443b79219011251e8ec021e202f762 *R/information_gain.R
 00b375b104991edb12569002c5de008d *R/internal.R
 525756c9dda5ec8fd2a4c7705e3a5246 *R/main.R
 44f3dde97eb4761829e03796e39b86ee *R/p_value.R
-6ddeec9a91b48e218b08a16f69863ac1 *R/tuples.R
-fe6a712ed74962449644cd3efd07d31c *R/utils.R
+324a773764b3c7148221cd36927b09bb *R/tuples.R
+f04aca5488b8cf516e9fc19aabbced0b *R/utils.R
 1eb7ffc80d3f154494861d6b0f988b8c *cleanup
 bb6ba154c464e99146ac271a9c12def9 *cleanup.win
 63144a99d968aa38c8ba6e342300f27e *configure
@@ -20,7 +20,7 @@ f101500568548270e0f8c947af44af43 *man/ComputeInterestingTuplesDiscrete.Rd
 58b630f67dff191b0fc4705cffc1a956 *man/ComputePValue.Rd
 b530704eb4189f0eb7b322f8566a47e9 *man/Discretize.Rd
 200e7f03955c5c8129b335dd73a1b3a1 *man/GenContrastVariables.Rd
-ee7c80d8762d1558cb2699faa1f37b32 *man/GetRange.Rd
+fb118f882a4dba7a9a57e789bd9f1914 *man/GetRange.Rd
 acd29bb646d18e8b5448fb9b2ee7e974 *man/MDFS.Rd
 fceaa45283e010b75264c9271c359b76 *man/RelevantVariables.MDFS.Rd
 ea828b2f8bc61e37570fc987a92d4ba5 *man/RelevantVariables.Rd

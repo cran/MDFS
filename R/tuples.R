@@ -102,11 +102,6 @@ ComputeInterestingTuples <- function(
     if (length(decision) != nrow(data)) {
       stop("Length of decision is not equal to the number of rows in data.")
     }
-
-    count_0 <- sum(decision == 0)
-    min.obj <- min(count_0, length(decision) - count_0)
-  } else {
-    min.obj <- nrow(data)
   }
 
   dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(2), as.integer(5))
@@ -118,7 +113,7 @@ ComputeInterestingTuples <- function(
   pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
 
   if (is.null(range)) {
-    range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
+    range <- GetRange(n = nrow(data), dimensions = dimensions, divisions = divisions)
   }
 
   range <- prepare_double_in_bounds(range, "Range", 0.0, 1.0)

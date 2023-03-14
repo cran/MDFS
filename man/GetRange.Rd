@@ -4,12 +4,12 @@
 \alias{GetRange}
 \title{Get the recommended range for multiple discretisations}
 \usage{
-GetRange(k = 5, n, dimensions, divisions = 1)
+GetRange(k = 3, n, dimensions, divisions = 1)
 }
 \arguments{
 \item{k}{the assumed minimum number of objects in a bucket (the default is the recommended value)}
 
-\item{n}{the number of objects in the least numerous class}
+\item{n}{the total number of objects considered}
 
 \item{dimensions}{the number of dimensions of analysis}
 

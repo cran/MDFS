@@ -1,14 +1,14 @@
 #' Get the recommended range for multiple discretisations
 #'
 #' @param k the assumed minimum number of objects in a bucket (the default is the recommended value)
-#' @param n the number of objects in the least numerous class
+#' @param n the total number of objects considered
 #' @param dimensions the number of dimensions of analysis
 #' @param divisions the number of divisions of discretisations
 #' @return The recommended range value (a floating point number).
 #' @examples
 #' GetRange(n = 250, dimensions = 2)
 #' @export
-GetRange <- function(k = 5, n, dimensions, divisions = 1) {
+GetRange <- function(k = 3, n, dimensions, divisions = 1) {
   ksi <- (k / n) ^ (1 / dimensions)
   suggested.range <- (1 - ksi * (1 + divisions)) / (1 - ksi * (1 - divisions))
   range <- max(0, min(suggested.range, 1))

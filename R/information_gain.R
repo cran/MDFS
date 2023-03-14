@@ -59,9 +59,6 @@ ComputeMaxInfoGains <- function(
     stop("Length of decision is not equal to the number of rows in data.")
   }
 
-  count_0 <- sum(decision == 0)
-  min.obj <- min(count_0, length(decision) - count_0)
-
   dimensions <- prepare_integer_in_bounds(dimensions, "Dimensions", as.integer(1), as.integer(5))
 
   divisions <- prepare_integer_in_bounds(divisions, "Divisions", as.integer(1), as.integer(15))
@@ -71,7 +68,7 @@ ComputeMaxInfoGains <- function(
   pc.xi <- prepare_double_in_bounds(pc.xi, "pc.xi", .Machine$double.xmin)
 
   if (is.null(range)) {
-    range <- GetRange(n = min.obj, dimensions = dimensions, divisions = divisions)
+    range <- GetRange(n = nrow(data), dimensions = dimensions, divisions = divisions)
   }
 
   range <- prepare_double_in_bounds(range, "Range", 0.0, 1.0)

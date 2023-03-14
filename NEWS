@@ -1,3 +1,15 @@
+1.5.0 | 2023-03-13
+
+* The default (recommended) range value has been changed. All invocations
+  without the range parameter set are affected, as are all runs of the
+  GetRange function without setting the k parameter. The new default
+  (recommendation) is less conservative and fixes the issue which used
+  to arise with imbalanced datasets of few objects where the old
+  recommended range would not allow to capture the effective split.
+  The new default mandates that only k=3 objects are needed (as opposed
+  to k=5) and the estimation is done using the total number of objects
+  (as opposed to only objects of the less numerous class).
+
 1.4.0 | 2023-01-30
 
 * Contrast variables are now handled separately to achieve the correct
