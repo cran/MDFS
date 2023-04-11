@@ -25,7 +25,7 @@ ComputeMaxInfoGains(
 
 \item{decision}{decision variable as a binary sequence of length equal to number of observations}
 
-\item{contrast_data}{the contrast counterpart of data, has to have the same number of observations}
+\item{contrast_data}{the contrast counterpart of data, has to have the same number of observations - not supported with CUDA}
 
 \item{dimensions}{number of dimensions (a positive integer; 5 max)}
 

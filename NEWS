@@ -1,3 +1,13 @@
+1.5.1 | 2023-04-11
+
+* Restored ability to compile with CUDA support on older toolkits which do
+  not support C++17 in nvcc.
+
+* Marked contrast_data as incompatible with the CUDA version.
+
+* Fixed the main MDFS function to avoid calling ComputeMaxInfoGains with
+  contrast_data with the CUDA version.
+
 1.5.0 | 2023-03-13
 
 * The default (recommended) range value has been changed. All invocations

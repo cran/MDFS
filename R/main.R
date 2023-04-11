@@ -15,7 +15,7 @@
 #' @param p.adjust.method method as accepted by \code{\link[stats]{p.adjust}} (\code{"BY"} is recommended for FDR, see Details)
 #' @param level statistical significance level
 #' @param seed seed for PRNG used during discretizations (\code{NULL} for random)
-#' @param use.CUDA whether to use CUDA acceleration (must be compiled with CUDA)
+#' @param use.CUDA whether to use CUDA acceleration (must be compiled with CUDA; NOTE: the CUDA version might provide a slightly lower sensitivity due to a lack of native support for \code{contrast_data})
 #' @return A \code{\link{list}} with the following fields:
 #'  \itemize{
 #'    \item \code{contrast.indices} -- indices of variables chosen to build contrast variables
@@ -58,11 +58,26 @@ MDFS <- function(
   contrast.mask <- contrast.indices <- contrast_data <- NULL
  }
 
- MIG.Result <- ComputeMaxInfoGains(data, decision,
-  contrast_data = contrast_data,
-  dimensions = dimensions, divisions = divisions,
-  discretizations = discretizations, range = range, pc.xi = pc.xi,
-  seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
+ # FIXME: fix the CUDA version to support contrast_data
+ if (use.CUDA) {
+  MIG.Result <- ComputeMaxInfoGains(data, decision,
+    contrast_data = NULL,
+    dimensions = dimensions, divisions = divisions,
+    discretizations = discretizations, range = range, pc.xi = pc.xi,
+    seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
+  MIG.Result_with_contrast <- ComputeMaxInfoGains(cbind(data, contrast_data), decision,
+    contrast_data = NULL,
+    dimensions = dimensions, divisions = divisions,
+    discretizations = discretizations, range = range, pc.xi = pc.xi,
+    seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
+  attr(MIG.Result, "contrast_igs") <- MIG.Result_with_contrast$IG[contrast.mask]
+ } else {
+  MIG.Result <- ComputeMaxInfoGains(data, decision,
+    contrast_data = contrast_data,
+    dimensions = dimensions, divisions = divisions,
+    discretizations = discretizations, range = range, pc.xi = pc.xi,
+    seed = seed, return.tuples = !use.CUDA && dimensions > 1, use.CUDA = use.CUDA)
+ }
  igs <- c(MIG.Result$IG, attr(MIG.Result, "contrast_igs"))
 
  fs <- ComputePValue(igs,

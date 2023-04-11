@@ -42,7 +42,7 @@ MDFS(
 
 \item{seed}{seed for PRNG used during discretizations (\code{NULL} for random)}
 
-\item{use.CUDA}{whether to use CUDA acceleration (must be compiled with CUDA)}
+\item{use.CUDA}{whether to use CUDA acceleration (must be compiled with CUDA; NOTE: the CUDA version might provide a slightly lower sensitivity due to a lack of native support for \code{contrast_data})}
 }
 \value{
 A \code{\link{list}} with the following fields:

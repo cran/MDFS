@@ -1,5 +1,5 @@
 NVCC = nvcc
-PKG_NVCCFLAGS = -std=c++17 -O3 -arch=compute_30 -Xcompiler='$(CXX17PICFLAGS) $(C_VISIBILITY)'
+PKG_NVCCFLAGS = -std=c++14 -O3 -arch=compute_30 -Xcompiler='$(CXX17PICFLAGS) $(C_VISIBILITY)'
 
 OBJS_CPU = cpu/discretize.o cpu/common.o
 # TODO: research why "kernel_param" must be before "kernels" to not lose the 'kernels' vector

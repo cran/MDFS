@@ -2,7 +2,7 @@
 #'
 #' @param data input data where columns are variables and rows are observations (all numeric)
 #' @param decision decision variable as a binary sequence of length equal to number of observations
-#' @param contrast_data the contrast counterpart of data, has to have the same number of observations
+#' @param contrast_data the contrast counterpart of data, has to have the same number of observations - not supported with CUDA
 #' @param dimensions number of dimensions (a positive integer; 5 max)
 #' @param divisions number of divisions (from 1 to 15; additionally limited by dimensions if using CUDA)
 #' @param discretizations number of discretizations
@@ -102,6 +102,10 @@ ComputeMaxInfoGains <- function(
 
     if (length(interesting.vars) > 0) {
       stop("CUDA acceleration does not support interesting.vars parameter (for now)")
+    }
+
+    if (!is.null(contrast_data)) {
+      stop("CUDA acceleration does not support contrast_data parameter (for now)")
     }
   }
 
