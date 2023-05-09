@@ -1,4 +1,12 @@
-1.5.1 | 2023-04-11
+1.5.3 | 2023-05-09 (R-only)
+
+* Add a function to set the number of OpenMP threads.
+
+1.5.2 | 2023-04-19 (Python-only)
+
+* Fixed building on non-GNU platforms such as Windows.
+
+1.5.1 | 2023-04-11 (R-only)
 
 * Restored ability to compile with CUDA support on older toolkits which do
   not support C++17 in nvcc.

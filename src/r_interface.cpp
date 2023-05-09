@@ -541,3 +541,14 @@ SEXP r_discretize(
 
     return Rout_result;
 }
+
+extern "C"
+SEXP r_omp_set_num_threads(
+        SEXP Rin_num_threads)
+{
+    #ifdef _OPENMP
+    const int num_threads = asInteger(Rin_num_threads);
+    omp_set_num_threads(num_threads);
+    #endif
+    return R_NilValue;
+}

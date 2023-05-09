@@ -11,6 +11,7 @@ static const R_CallMethodDef callMethods[]  = {
   CALLDEF(r_compute_all_matching_tuples, 15),
   CALLDEF(r_compute_all_matching_tuples_discrete, 11),
   CALLDEF(r_discretize, 6),
+  CALLDEF(r_omp_set_num_threads, 1),
   {NULL, NULL, 0}
 };
 

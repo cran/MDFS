@@ -74,3 +74,8 @@ SEXP r_discretize(
 	SEXP Rin_seed,
 	SEXP Rin_range
 );
+
+extern "C"
+SEXP r_omp_set_num_threads(
+	SEXP Rin_num_threads
+);
