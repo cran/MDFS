@@ -1,13 +1,13 @@
-33b9a101bf28ede5417558e89c3838c8 *DESCRIPTION
+3bf4a50c3747f2d7c054f74eac193c1c *DESCRIPTION
 cf78f3e9f1ac1deca54356e17f343544 *NAMESPACE
-e109680b200371009e7b67133d220ec3 *NEWS
+4ec3a9edddfa7986921ac01d7436711f *NEWS
 2c10bcf5139345dc16e0eaf4153ce26c *R/data.R
 84fdf1b77e9ba6f2235634ec34322e52 *R/information_gain.R
 00b375b104991edb12569002c5de008d *R/internal.R
 a23f73f45befcd45f5734e04e5bb960a *R/main.R
-44f3dde97eb4761829e03796e39b86ee *R/p_value.R
+ca9ad9b86ebffd7d7fc16be3f49262d1 *R/p_value.R
 324a773764b3c7148221cd36927b09bb *R/tuples.R
-ec32a1d84fa08bc7e93117afc7970b99 *R/utils.R
+2cd8f9fe032b3f102eb6b6efe08c2d13 *R/utils.R
 1eb7ffc80d3f154494861d6b0f988b8c *cleanup
 bb6ba154c464e99146ac271a9c12def9 *cleanup.win
 63144a99d968aa38c8ba6e342300f27e *configure
@@ -26,8 +26,8 @@ fceaa45283e010b75264c9271c359b76 *man/RelevantVariables.MDFS.Rd
 ea828b2f8bc61e37570fc987a92d4ba5 *man/RelevantVariables.Rd
 5daa0029d9954faa0a350151304e57ed *man/as.data.frame.MDFS.Rd
 f5f79ab6996516e203e8e48f90c20da9 *man/madelon.Rd
-f4c21cb1e9ea4d604034d26ff1bb69aa *man/mdfs_omp_set_num_threads.Rd
-2450426bf8b73a183a6a1c5179f61b02 *man/plot.MDFS.Rd
+98bcce5b725430490bafc36e003d607a *man/mdfs_omp_set_num_threads.Rd
+185089728d705b1ff49624d1ddcc10e4 *man/plot.MDFS.Rd
 227f40ec23cbb8477f64642266aaacf4 *src/MDFS-win.def
 ff3d9935530430caed1d7aa80aa2862f *src/Makevars.cuda.in
 8aba6b32da05dc5118b1791a76fd9972 *src/Makevars.in
@@ -76,6 +76,6 @@ e3d152c72214e0373b322ffd8d016ec6 *src/gpu/tableskernel.cuh
 1a9880f72e6a832acf4a81cb51916ca8 *src/gpu/worker.cpp
 fe938df23befd307fd15cadbc5eb4ab5 *src/gpu/worker.h
 f215324b21aa3d48b2ddd8af30c0bf88 *src/r_init.cpp
-fee644910127569b5113a386ce5ac203 *src/r_interface.cpp
-817bca83a296111973167b191d91abc5 *src/r_interface.h
+b90aa33a333ec8712d306f85c8b4dff9 *src/r_interface.cpp
+56efbc49fbf598eef0a473afa9c347bd *src/r_interface.h
 7b23368fc9feef2370cc15b5a0928605 *tests/simple_run.R
